@@ -11,13 +11,17 @@ const TYPE_LABEL: Record<string, string> = {
   pdf: "PDF",
 };
 
-export const ARTIFACT_DRAG_MIME = "application/x-satchel-artifact-id";
-
 export function ProjectGrid() {
   const artifacts = useLibraryStore((s) => s.artifacts);
   const selectArtifact = useLibraryStore((s) => s.selectArtifact);
   const importPaths = useLibraryStore((s) => s.importPaths);
-  const project = useLibraryStore((s) => s.projects.find((p) => p.id === s.selectedProjectId));
+  const moveArtifact = useLibraryStore((s) => s.moveArtifact);
+  const projects = useLibraryStore((s) => s.projects);
+  const selectedProjectId = useLibraryStore((s) => s.selectedProjectId);
+  const project = projects.find((p) => p.id === selectedProjectId);
+  const otherProjects = projects
+    .filter((p) => p.id !== selectedProjectId)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   async function handleImportClick() {
     const selected = await open({ multiple: true });
@@ -40,19 +44,31 @@ export function ProjectGrid() {
       ) : (
         <div className="artifact-grid">
           {artifacts.map((artifact) => (
-            <button
-              key={artifact.id}
-              className="artifact-card"
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData(ARTIFACT_DRAG_MIME, artifact.id);
-                e.dataTransfer.effectAllowed = "move";
-              }}
-              onClick={() => selectArtifact(artifact.id)}
-            >
-              <span className="artifact-card-type">{TYPE_LABEL[artifact.type] ?? artifact.type}</span>
-              <span className="artifact-card-title">{artifact.title}</span>
-            </button>
+            <div key={artifact.id} className="artifact-card">
+              <button className="artifact-card-open" onClick={() => selectArtifact(artifact.id)}>
+                <span className="artifact-card-type">{TYPE_LABEL[artifact.type] ?? artifact.type}</span>
+                <span className="artifact-card-title">{artifact.title}</span>
+              </button>
+              {otherProjects.length > 0 && (
+                <select
+                  className="artifact-card-move"
+                  value=""
+                  onChange={(e) => {
+                    const targetId = e.target.value;
+                    if (targetId) moveArtifact(artifact.id, selectedProjectId, targetId);
+                  }}
+                >
+                  <option value="" disabled>
+                    Move to…
+                  </option>
+                  {otherProjects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           ))}
         </div>
       )}
