@@ -47,6 +47,9 @@ pub fn run() {
             commands::ingest::import_artifact,
             commands::index::rebuild_index,
             commands::index::search_artifacts,
+            commands::secrets::save_secret,
+            commands::secrets::get_secret,
+            commands::secrets::delete_secret,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

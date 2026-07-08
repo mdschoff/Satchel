@@ -15,4 +15,8 @@ export const backend = {
     invoke<void>("save_artifact_source", { projectId, artifactId, content }),
   rebuildIndex: () => invoke<void>("rebuild_index"),
   searchArtifacts: (query: string) => invoke<string[]>("search_artifacts", { query }),
+  saveSecret: (providerId: string, value: string) =>
+    invoke<void>("save_secret", { providerId, value }),
+  getSecret: (providerId: string) => invoke<string | null>("get_secret", { providerId }),
+  deleteSecret: (providerId: string) => invoke<void>("delete_secret", { providerId }),
 };

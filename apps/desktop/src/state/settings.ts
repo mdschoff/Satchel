@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 interface ProviderSettings {
-  apiKey?: string;
   baseUrl?: string;
   model?: string;
 }
@@ -15,8 +14,8 @@ interface SettingsState {
 }
 
 /**
- * Persisted to localStorage for now - fine for a single-user local-first app,
- * but API keys deserve OS-keychain storage before this ships broadly.
+ * Non-secret settings only (active provider, base URL, model) - persisted to
+ * localStorage. API keys live in the OS keychain instead, via state/apiKeys.ts.
  */
 export const useSettingsStore = create<SettingsState>()(
   persist(
