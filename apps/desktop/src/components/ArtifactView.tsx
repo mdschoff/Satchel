@@ -1,0 +1,138 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import Editor from "@monaco-editor/react";
+import { useLibraryStore } from "../state/library";
+import { backend } from "../lib/tauri";
+import { getRenderer } from "../renderers/registry";
+import { ChatDrawer } from "./ChatDrawer";
+
+const EDITABLE_TYPES = new Set(["html", "svg", "markdown", "jsx", "tsx"]);
+const MONACO_LANGUAGE: Record<string, string> = {
+  html: "html",
+  svg: "xml",
+  markdown: "markdown",
+  jsx: "javascript",
+  tsx: "typescript",
+};
+
+export function ArtifactView() {
+  const selectedProjectId = useLibraryStore((s) => s.selectedProjectId);
+  const selectedArtifactId = useLibraryStore((s) => s.selectedArtifactId);
+  const selectArtifact = useLibraryStore((s) => s.selectArtifact);
+  const artifact = useLibraryStore((s) => s.artifacts.find((a) => a.id === s.selectedArtifactId));
+
+  const [source, setSource] = useState<string>("");
+  const [previewHtml, setPreviewHtml] = useState<string>("");
+  const [compileError, setCompileError] = useState<string | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const renderSource = useCallback(
+    async (rawSource: string) => {
+      if (!artifact) return;
+      const renderer = getRenderer(artifact.type);
+      setCompileError(null);
+      if (renderer.needsCompile && renderer.compile) {
+        const compiled = await renderer.compile(rawSource);
+        if (!compiled.ok || !compiled.output) {
+          setCompileError(compiled.errors?.join("\n") ?? "Compile failed");
+          return;
+        }
+        const result = await renderer.render(compiled.output);
+        setPreviewHtml(result.html);
+      } else {
+        const result = await renderer.render(rawSource);
+        setPreviewHtml(result.html);
+      }
+    },
+    [artifact],
+  );
+
+  useEffect(() => {
+    if (!artifact || !selectedArtifactId) return;
+    let cancelled = false;
+    backend.getArtifactSource(selectedProjectId, selectedArtifactId).then((content) => {
+      if (cancelled) return;
+      setSource(content);
+      renderSource(content);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedArtifactId]);
+
+  function handleEditorChange(value: string | undefined) {
+    const next = value ?? "";
+    setSource(next);
+    renderSource(next);
+
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(() => {
+      if (selectedArtifactId) {
+        backend.saveArtifactSource(selectedProjectId, selectedArtifactId, next);
+      }
+    }, 500);
+  }
+
+  async function handleAIEdit(newSource: string) {
+    setSource(newSource);
+    await renderSource(newSource);
+    if (selectedArtifactId) {
+      await backend.saveArtifactSource(selectedProjectId, selectedArtifactId, newSource);
+    }
+  }
+
+  if (!artifact) return null;
+  const canEdit = EDITABLE_TYPES.has(artifact.type);
+
+  return (
+    <div className="artifact-view">
+      <header className="artifact-view-header">
+        <button className="back-button" onClick={() => selectArtifact(null)}>
+          ← Back
+        </button>
+        <h1>{artifact.title}</h1>
+        <div className="artifact-view-actions">
+          {canEdit && (
+            <button onClick={() => setIsEditorOpen((v) => !v)}>
+              {isEditorOpen ? "Hide code" : "Show code"}
+            </button>
+          )}
+          <button onClick={() => setIsChatOpen((v) => !v)}>{isChatOpen ? "Close chat" : "Ask AI"}</button>
+        </div>
+      </header>
+
+      <div className="artifact-view-body">
+        {isEditorOpen && canEdit && (
+          <div className="artifact-editor-pane">
+            <Editor
+              language={MONACO_LANGUAGE[artifact.type] ?? "plaintext"}
+              value={source}
+              onChange={handleEditorChange}
+              theme="vs-dark"
+              options={{ minimap: { enabled: false }, fontSize: 13 }}
+            />
+          </div>
+        )}
+
+        <div className="artifact-preview-pane">
+          {compileError ? (
+            <pre className="compile-error">{compileError}</pre>
+          ) : (
+            <iframe
+              className="artifact-preview-frame"
+              sandbox="allow-scripts"
+              srcDoc={previewHtml}
+              title={artifact.title}
+            />
+          )}
+        </div>
+
+        {isChatOpen && (
+          <ChatDrawer artifact={artifact} source={source} onApplyEdit={handleAIEdit} />
+        )}
+      </div>
+    </div>
+  );
+}

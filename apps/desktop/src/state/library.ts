@@ -1,0 +1,76 @@
+import { create } from "zustand";
+import type { ArtifactManifest, Project } from "@satchel/artifact-core";
+import { INBOX_PROJECT_ID } from "@satchel/artifact-core";
+import { backend } from "../lib/tauri";
+
+interface LibraryState {
+  projects: Project[];
+  selectedProjectId: string;
+  artifacts: ArtifactManifest[];
+  selectedArtifactId: string | null;
+  isLoading: boolean;
+  error: string | null;
+
+  loadProjects: () => Promise<void>;
+  selectProject: (projectId: string) => Promise<void>;
+  createProject: (name: string) => Promise<void>;
+  importPaths: (paths: string[]) => Promise<void>;
+  selectArtifact: (artifactId: string | null) => void;
+  refreshArtifacts: () => Promise<void>;
+}
+
+export const useLibraryStore = create<LibraryState>((set, get) => ({
+  projects: [],
+  selectedProjectId: INBOX_PROJECT_ID,
+  artifacts: [],
+  selectedArtifactId: null,
+  isLoading: false,
+  error: null,
+
+  async loadProjects() {
+    set({ isLoading: true, error: null });
+    try {
+      const projects = await backend.listProjects();
+      set({ projects, isLoading: false });
+      await get().refreshArtifacts();
+    } catch (err) {
+      set({ error: String(err), isLoading: false });
+    }
+  },
+
+  async selectProject(projectId: string) {
+    set({ selectedProjectId: projectId, selectedArtifactId: null });
+    await get().refreshArtifacts();
+  },
+
+  async createProject(name: string) {
+    await backend.createProject(name, null);
+    await get().loadProjects();
+  },
+
+  async importPaths(paths: string[]) {
+    const projectId = get().selectedProjectId;
+    for (const path of paths) {
+      try {
+        await backend.importArtifact(projectId, path);
+      } catch (err) {
+        set({ error: String(err) });
+      }
+    }
+    await get().refreshArtifacts();
+  },
+
+  selectArtifact(artifactId: string | null) {
+    set({ selectedArtifactId: artifactId });
+  },
+
+  async refreshArtifacts() {
+    const projectId = get().selectedProjectId;
+    try {
+      const artifacts = await backend.listArtifacts(projectId);
+      set({ artifacts });
+    } catch (err) {
+      set({ error: String(err) });
+    }
+  },
+}));

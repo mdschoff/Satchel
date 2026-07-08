@@ -1,0 +1,12 @@
+{
+  "name": "satchel",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @satchel/desktop tauri dev",
+    "build": "pnpm --filter @satchel/desktop tauri build",
+    "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "packageManager": "pnpm@11.10.0"
+}
