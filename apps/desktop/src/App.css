@@ -91,6 +91,11 @@ button:hover {
   color: #fff;
 }
 
+.project-item.drop-target {
+  outline: 2px solid #5b9dff;
+  outline-offset: -2px;
+}
+
 .new-project-button {
   margin-top: 0.5rem;
   background: transparent;
@@ -122,6 +127,25 @@ button:hover {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1rem;
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: #fdecea;
+  color: #c0392b;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #f5c6c0;
+  font-size: 0.9em;
+}
+
+.error-banner button {
+  background: transparent;
+  border: 1px solid #c0392b;
+  color: #c0392b;
+  padding: 0.2em 0.6em;
 }
 
 .empty-state {

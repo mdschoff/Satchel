@@ -70,6 +70,36 @@ pub fn get_artifact_source(
 }
 
 #[tauri::command]
+pub fn move_artifact(
+    state: State<AppState>,
+    artifact_id: String,
+    from_project_id: String,
+    to_project_id: String,
+) -> Result<ArtifactManifest, String> {
+    if from_project_id == to_project_id {
+        return library::read_manifest(&state.library_root, &from_project_id, &artifact_id)
+            .map_err(|e| e.to_string());
+    }
+
+    let mut manifest = library::read_manifest(&state.library_root, &from_project_id, &artifact_id)
+        .map_err(|e| e.to_string())?;
+
+    let old_dir = library::artifact_dir(&state.library_root, &from_project_id, &artifact_id);
+    let new_dir = library::artifact_dir(&state.library_root, &to_project_id, &artifact_id);
+    fs::create_dir_all(library::artifacts_dir(&state.library_root, &to_project_id))
+        .map_err(|e| e.to_string())?;
+    fs::rename(&old_dir, &new_dir).map_err(|e| e.to_string())?;
+
+    manifest.project_id = to_project_id;
+    manifest.updated_at = library::now_iso();
+    library::write_manifest(&state.library_root, &manifest).map_err(|e| e.to_string())?;
+
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    db::upsert_artifact(&conn, &manifest).map_err(|e| e.to_string())?;
+    Ok(manifest)
+}
+
+#[tauri::command]
 pub fn save_artifact_source(
     state: State<AppState>,
     project_id: String,

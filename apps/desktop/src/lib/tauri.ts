@@ -13,6 +13,8 @@ export const backend = {
     invoke<string>("get_artifact_source", { projectId, artifactId }),
   saveArtifactSource: (projectId: string, artifactId: string, content: string) =>
     invoke<void>("save_artifact_source", { projectId, artifactId, content }),
+  moveArtifact: (artifactId: string, fromProjectId: string, toProjectId: string) =>
+    invoke<ArtifactManifest>("move_artifact", { artifactId, fromProjectId, toProjectId }),
   rebuildIndex: () => invoke<void>("rebuild_index"),
   searchArtifacts: (query: string) => invoke<string[]>("search_artifacts", { query }),
   saveSecret: (providerId: string, value: string) =>

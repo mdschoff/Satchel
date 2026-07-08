@@ -30,19 +30,27 @@ export function ArtifactView() {
   const renderSource = useCallback(
     async (rawSource: string) => {
       if (!artifact) return;
-      const renderer = getRenderer(artifact.type);
       setCompileError(null);
-      if (renderer.needsCompile && renderer.compile) {
-        const compiled = await renderer.compile(rawSource);
-        if (!compiled.ok || !compiled.output) {
-          setCompileError(compiled.errors?.join("\n") ?? "Compile failed");
+      try {
+        const renderer = getRenderer(artifact.type);
+        if (!renderer) {
+          setCompileError(`No renderer registered for artifact type "${artifact.type}".`);
           return;
         }
-        const result = await renderer.render(compiled.output);
-        setPreviewHtml(result.html);
-      } else {
-        const result = await renderer.render(rawSource);
-        setPreviewHtml(result.html);
+        if (renderer.needsCompile && renderer.compile) {
+          const compiled = await renderer.compile(rawSource);
+          if (!compiled.ok || !compiled.output) {
+            setCompileError(compiled.errors?.join("\n") ?? "Compile failed");
+            return;
+          }
+          const result = await renderer.render(compiled.output);
+          setPreviewHtml(result.html);
+        } else {
+          const result = await renderer.render(rawSource);
+          setPreviewHtml(result.html);
+        }
+      } catch (err) {
+        setCompileError(`Render failed: ${err instanceof Error ? err.message : String(err)}`);
       }
     },
     [artifact],
@@ -51,11 +59,17 @@ export function ArtifactView() {
   useEffect(() => {
     if (!artifact || !selectedArtifactId) return;
     let cancelled = false;
-    backend.getArtifactSource(selectedProjectId, selectedArtifactId).then((content) => {
-      if (cancelled) return;
-      setSource(content);
-      renderSource(content);
-    });
+    backend
+      .getArtifactSource(selectedProjectId, selectedArtifactId)
+      .then((content) => {
+        if (cancelled) return;
+        setSource(content);
+        renderSource(content);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setCompileError(`Couldn't load this artifact: ${String(err)}`);
+      });
     return () => {
       cancelled = true;
     };

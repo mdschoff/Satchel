@@ -11,6 +11,8 @@ const TYPE_LABEL: Record<string, string> = {
   pdf: "PDF",
 };
 
+export const ARTIFACT_DRAG_MIME = "application/x-satchel-artifact-id";
+
 export function ProjectGrid() {
   const artifacts = useLibraryStore((s) => s.artifacts);
   const selectArtifact = useLibraryStore((s) => s.selectArtifact);
@@ -41,6 +43,11 @@ export function ProjectGrid() {
             <button
               key={artifact.id}
               className="artifact-card"
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData(ARTIFACT_DRAG_MIME, artifact.id);
+                e.dataTransfer.effectAllowed = "move";
+              }}
               onClick={() => selectArtifact(artifact.id)}
             >
               <span className="artifact-card-type">{TYPE_LABEL[artifact.type] ?? artifact.type}</span>

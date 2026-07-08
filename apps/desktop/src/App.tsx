@@ -10,6 +10,7 @@ export default function App() {
   const loadProjects = useLibraryStore((s) => s.loadProjects);
   const importPaths = useLibraryStore((s) => s.importPaths);
   const selectedArtifactId = useLibraryStore((s) => s.selectedArtifactId);
+  const error = useLibraryStore((s) => s.error);
 
   useEffect(() => {
     loadProjects();
@@ -29,7 +30,15 @@ export default function App() {
   return (
     <div className="app-shell">
       <Sidebar />
-      <main className="app-main">{selectedArtifactId ? <ArtifactView /> : <ProjectGrid />}</main>
+      <main className="app-main">
+        {error && (
+          <div className="error-banner">
+            {error}
+            <button onClick={() => useLibraryStore.setState({ error: null })}>Dismiss</button>
+          </div>
+        )}
+        {selectedArtifactId ? <ArtifactView /> : <ProjectGrid />}
+      </main>
     </div>
   );
 }

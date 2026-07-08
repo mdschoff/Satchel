@@ -17,6 +17,7 @@ interface LibraryState {
   importPaths: (paths: string[]) => Promise<void>;
   selectArtifact: (artifactId: string | null) => void;
   refreshArtifacts: () => Promise<void>;
+  moveArtifact: (artifactId: string, fromProjectId: string, toProjectId: string) => Promise<void>;
 }
 
 export const useLibraryStore = create<LibraryState>((set, get) => ({
@@ -69,6 +70,16 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     try {
       const artifacts = await backend.listArtifacts(projectId);
       set({ artifacts });
+    } catch (err) {
+      set({ error: String(err) });
+    }
+  },
+
+  async moveArtifact(artifactId, fromProjectId, toProjectId) {
+    if (fromProjectId === toProjectId) return;
+    try {
+      await backend.moveArtifact(artifactId, fromProjectId, toProjectId);
+      await get().refreshArtifacts();
     } catch (err) {
       set({ error: String(err) });
     }

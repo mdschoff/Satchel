@@ -44,6 +44,7 @@ pub fn run() {
             commands::library::list_artifacts,
             commands::library::get_artifact_source,
             commands::library::save_artifact_source,
+            commands::library::move_artifact,
             commands::ingest::import_artifact,
             commands::index::rebuild_index,
             commands::index::search_artifacts,
