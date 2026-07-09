@@ -20,8 +20,11 @@ const SOURCES: Record<string, string> = {
   scheduler: schedulerSource,
   [ENTRY_PATH]: `
     const React = require("react");
-    const ReactDOM = require("react-dom/client");
-    module.exports = { React, ReactDOM };
+    const ReactDOMBase = require("react-dom");
+    const ReactDOMClient = require("react-dom/client");
+    // Merge base + client so the global covers both createRoot and the
+    // base exports (createPortal, flushSync) artifacts may import.
+    module.exports = { React, ReactDOM: Object.assign({}, ReactDOMBase, ReactDOMClient) };
   `,
 };
 
@@ -67,3 +70,33 @@ export function getReactRuntimeBundle(): Promise<string> {
   }
   return runtimePromise;
 }
+
+const SHIM_NAMESPACE = "satchel-react-global-shim";
+
+const GLOBAL_SHIMS: Record<string, string> = {
+  react: "module.exports = window.React;",
+  "react-dom": "module.exports = window.ReactDOM;",
+  "react-dom/client": "module.exports = window.ReactDOM;",
+};
+
+/**
+ * Aliases artifact imports of react / react-dom to the window globals set up
+ * by getReactRuntimeBundle(). Bundling a second React copy into the artifact
+ * instead would leave hooks dispatching against a different instance than
+ * the one createRoot renders with ("Cannot read properties of null (reading
+ * 'useState')") - React only works when component and renderer share one
+ * instance.
+ */
+export const globalReactShimPlugin: esbuild.Plugin = {
+  name: "satchel-react-global-shim",
+  setup(build) {
+    build.onResolve({ filter: /^(react|react-dom|react-dom\/client)$/ }, (args) => ({
+      path: args.path,
+      namespace: SHIM_NAMESPACE,
+    }));
+    build.onLoad({ filter: /.*/, namespace: SHIM_NAMESPACE }, (args) => ({
+      contents: GLOBAL_SHIMS[args.path],
+      loader: "js",
+    }));
+  },
+};
