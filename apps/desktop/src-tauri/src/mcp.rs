@@ -16,7 +16,7 @@ use rmcp::transport::streamable_http_server::{
 };
 use rmcp::{tool, tool_handler, tool_router, ErrorData as McpError, ServerHandler};
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
 /// Bound to localhost only - this is a convenience for tools running on the
@@ -75,6 +75,25 @@ struct ListVersionsParams {
     artifact_id: String,
 }
 
+// The MCP spec requires each tool's outputSchema to have root type
+// "object", so list-returning tools wrap their Vec in a named field
+// rather than returning a bare JSON array.
+
+#[derive(Debug, Serialize, JsonSchema)]
+struct ProjectsResult {
+    projects: Vec<Project>,
+}
+
+#[derive(Debug, Serialize, JsonSchema)]
+struct ArtifactsResult {
+    artifacts: Vec<ArtifactManifest>,
+}
+
+#[derive(Debug, Serialize, JsonSchema)]
+struct VersionsResult {
+    versions: Vec<ArtifactVersion>,
+}
+
 #[derive(Clone)]
 pub struct SatchelMcpServer {
     app: AppHandle,
@@ -88,9 +107,11 @@ impl SatchelMcpServer {
 
     #[tool(description = "List every project (folder) in the Satchel library. Projects can be \
         nested via parentId; a null parentId means top-level.")]
-    async fn list_projects(&self) -> Result<Json<Vec<Project>>, McpError> {
+    async fn list_projects(&self) -> Result<Json<ProjectsResult>, McpError> {
         let state = self.app.state::<AppState>();
-        commands::library::list_projects(state).map(Json).map_err(mcp_err)
+        commands::library::list_projects(state)
+            .map(|projects| Json(ProjectsResult { projects }))
+            .map_err(mcp_err)
     }
 
     #[tool(description = "Create a new project (folder) in the Satchel library.")]
@@ -108,10 +129,10 @@ impl SatchelMcpServer {
     async fn list_artifacts(
         &self,
         Parameters(ListArtifactsParams { project_id }): Parameters<ListArtifactsParams>,
-    ) -> Result<Json<Vec<ArtifactManifest>>, McpError> {
+    ) -> Result<Json<ArtifactsResult>, McpError> {
         let state = self.app.state::<AppState>();
         commands::library::list_artifacts(state, project_id)
-            .map(Json)
+            .map(|artifacts| Json(ArtifactsResult { artifacts }))
             .map_err(mcp_err)
     }
 
@@ -119,10 +140,10 @@ impl SatchelMcpServer {
     async fn search_artifacts(
         &self,
         Parameters(SearchParams { query }): Parameters<SearchParams>,
-    ) -> Result<Json<Vec<ArtifactManifest>>, McpError> {
+    ) -> Result<Json<ArtifactsResult>, McpError> {
         let state = self.app.state::<AppState>();
         commands::index::search_artifacts(state, query)
-            .map(Json)
+            .map(|artifacts| Json(ArtifactsResult { artifacts }))
             .map_err(mcp_err)
     }
 
@@ -173,10 +194,10 @@ impl SatchelMcpServer {
     async fn list_artifact_versions(
         &self,
         Parameters(ListVersionsParams { project_id, artifact_id }): Parameters<ListVersionsParams>,
-    ) -> Result<Json<Vec<ArtifactVersion>>, McpError> {
+    ) -> Result<Json<VersionsResult>, McpError> {
         let state = self.app.state::<AppState>();
         commands::library::list_artifact_versions(state, project_id, artifact_id)
-            .map(Json)
+            .map(|versions| Json(VersionsResult { versions }))
             .map_err(mcp_err)
     }
 }
