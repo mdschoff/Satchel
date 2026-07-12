@@ -8,7 +8,7 @@ AI tools generate a lot of one-off, throwaway artifacts. Satchel gives them a pe
 
 ## Status
 
-Early scaffold. Core pieces in place: drag-and-drop/Finder import, project organization, live rendering for HTML/SVG/JSX-TSX/Markdown/images/PDF, a code editor with live re-render, and pluggable AI-edit providers (Claude, OpenAI, Gemini, or a local Ollama model).
+Core pieces in place: drag-and-drop/Finder import, nested project folders, cross-project search, live rendering for HTML/SVG/JSX-TSX/Markdown/images/PDF, a code editor with live re-render, artifact deletion, and pluggable AI-edit providers (Claude, OpenAI, Gemini, or a local Ollama model) with a Settings screen for API keys - stored in the OS keychain, never in plain text.
 
 ## Architecture
 

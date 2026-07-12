@@ -21,7 +21,7 @@ Single persistent window, not a two-window "launcher then workspace" model:
 library/
 ├── projects/
 │   ├── <project-id>/
-│   │   ├── project.json          # name, color, createdAt/updatedAt, parentId (reserved for nested folders)
+│   │   ├── project.json          # name, color, createdAt/updatedAt, parentId (nested sub-projects)
 │   │   └── artifacts/
 │   │       └── <artifact-id>/
 │   │           ├── manifest.json # title, type, tags, sourceFile, sourceNote, timestamps
