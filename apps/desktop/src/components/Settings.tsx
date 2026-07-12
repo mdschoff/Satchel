@@ -4,6 +4,9 @@ import { useApiKeyStore } from "../state/apiKeys";
 import { useSettingsStore } from "../state/settings";
 import { useUiStore } from "../state/ui";
 
+// Must match MCP_PORT in apps/desktop/src-tauri/src/mcp.rs.
+const MCP_URL = "http://127.0.0.1:7825/mcp";
+
 export function Settings() {
   const setView = useUiStore((s) => s.setView);
   const providerSettings = useSettingsStore((s) => s.providers);
@@ -81,6 +84,15 @@ export function Settings() {
             </div>
           );
         })}
+
+        <h2>MCP server</h2>
+        <p className="settings-hint">
+          Satchel runs a local MCP server (localhost only) so MCP-aware tools - Claude Code,
+          Claude Desktop, Cursor - can list, search, and create artifacts directly.
+        </p>
+        <div className="settings-provider-card">
+          <code className="settings-mcp-url">{MCP_URL}</code>
+        </div>
       </div>
     </div>
   );

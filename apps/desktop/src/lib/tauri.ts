@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ArtifactManifest, Project } from "@satchel/artifact-core";
+import type { ArtifactManifest, ArtifactVersion, Project } from "@satchel/artifact-core";
 
 export const backend = {
   listProjects: () => invoke<Project[]>("list_projects"),
@@ -23,4 +23,10 @@ export const backend = {
     invoke<void>("save_secret", { providerId, value }),
   getSecret: (providerId: string) => invoke<string | null>("get_secret", { providerId }),
   deleteSecret: (providerId: string) => invoke<void>("delete_secret", { providerId }),
+  listArtifactVersions: (projectId: string, artifactId: string) =>
+    invoke<ArtifactVersion[]>("list_artifact_versions", { projectId, artifactId }),
+  restoreArtifactVersion: (projectId: string, artifactId: string, timestamp: string) =>
+    invoke<void>("restore_artifact_version", { projectId, artifactId, timestamp }),
+  exportProject: (projectId: string, destPath: string) =>
+    invoke<void>("export_project", { projectId, destPath }),
 };

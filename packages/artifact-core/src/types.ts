@@ -22,8 +22,7 @@ export interface Project {
   id: string;
   name: string;
   color: string | null;
-  /** Reserved for nested sub-folders; always null in v1 but kept so nesting
-   * doesn't require a migration later. */
+  /** Null for a top-level project; otherwise the id of the project this one is nested under. */
   parentId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -47,9 +46,8 @@ export interface ArtifactManifest {
   updatedAt: string;
 }
 
-export interface EditHistoryEntry {
+export interface ArtifactVersion {
+  /** Sortable snapshot id (also its filename under versions/) - newest sorts last. */
   timestamp: string;
-  /** "manual" for hand edits, or the AI provider id (e.g. "claude") for AI edits */
-  actor: string;
-  instruction: string | null;
+  size: number;
 }

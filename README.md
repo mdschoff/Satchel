@@ -8,7 +8,9 @@ AI tools generate a lot of one-off, throwaway artifacts. Satchel gives them a pe
 
 ## Status
 
-Core pieces in place: drag-and-drop/Finder import, nested project folders, cross-project search, live rendering for HTML/SVG/JSX-TSX/Markdown/images/PDF, a code editor with live re-render, artifact deletion, and pluggable AI-edit providers (Claude, OpenAI, Gemini, or a local Ollama model) with a Settings screen for API keys - stored in the OS keychain, never in plain text.
+Core pieces in place: drag-and-drop/Finder import, nested project folders, cross-project search, live rendering for HTML/SVG/JSX-TSX/Markdown/images/PDF, a code editor with live re-render, per-artifact version history, project export to zip, artifact deletion, and pluggable AI-edit providers (Claude, OpenAI, Gemini, or a local Ollama model) with a Settings screen for API keys - stored in the OS keychain, never in plain text.
+
+Satchel also runs a local [MCP server](docs/mcp-server.md) so MCP-aware tools (Claude Code, Claude Desktop, Cursor) can list, search, and push artifacts in directly from a conversation.
 
 ## Architecture
 
@@ -33,7 +35,8 @@ library/
 │   │   └── artifacts/
 │   │       └── <artifact-id>/
 │   │           ├── manifest.json
-│   │           └── source.*
+│   │           ├── source.*
+│   │           └── versions/     (snapshots kept before each overwrite)
 │   └── inbox/
 └── index.sqlite   (rebuildable metadata cache - not the source of truth)
 ```

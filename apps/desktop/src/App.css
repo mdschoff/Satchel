@@ -204,6 +204,11 @@ button:hover {
   margin-bottom: 1rem;
 }
 
+.project-grid-header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .error-banner {
   display: flex;
   align-items: center;
@@ -362,6 +367,61 @@ button:hover {
   white-space: pre-wrap;
 }
 
+/* Version history */
+
+.version-history {
+  width: 280px;
+  flex-shrink: 0;
+  border-left: 1px solid #e2e2e2;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  gap: 0.75rem;
+  background: #fafafa;
+  overflow-y: auto;
+}
+
+.version-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.version-history-header h3 {
+  margin: 0;
+  font-size: 1em;
+}
+
+.version-history-empty {
+  color: #888;
+  font-size: 0.9em;
+}
+
+.version-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.version-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid #e2e2e2;
+  border-radius: 6px;
+  font-size: 0.85em;
+}
+
+.version-history-size {
+  color: #888;
+  font-size: 0.85em;
+}
+
 /* Settings */
 
 .settings-view {
@@ -421,6 +481,12 @@ button:hover {
 .settings-field-grid input {
   font-size: 1em;
   color: inherit;
+}
+
+.settings-mcp-url {
+  display: block;
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
 }
 
 /* Chat drawer */
@@ -489,8 +555,13 @@ button:hover {
     border-color: #3a3a3a;
   }
 
-  .chat-drawer {
+  .chat-drawer,
+  .version-history {
     background: #232323;
+    border-color: #3a3a3a;
+  }
+
+  .version-history-item {
     border-color: #3a3a3a;
   }
 

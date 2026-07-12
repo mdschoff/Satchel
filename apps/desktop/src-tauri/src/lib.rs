@@ -1,6 +1,7 @@
 mod commands;
 mod db;
 mod library;
+mod mcp;
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -36,6 +37,9 @@ pub fn run() {
                 library_root,
                 db: Mutex::new(conn),
             });
+
+            mcp::spawn(app.handle().clone());
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -46,6 +50,10 @@ pub fn run() {
             commands::library::save_artifact_source,
             commands::library::move_artifact,
             commands::library::delete_artifact,
+            commands::library::list_artifact_versions,
+            commands::library::restore_artifact_version,
+            commands::library::create_artifact_from_content,
+            commands::export::export_project,
             commands::ingest::import_artifact,
             commands::index::rebuild_index,
             commands::index::search_artifacts,

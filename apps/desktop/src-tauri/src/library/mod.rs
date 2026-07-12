@@ -1,3 +1,4 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -5,8 +6,10 @@ use uuid::Uuid;
 
 pub const CURRENT_SCHEMA_VERSION: u32 = 1;
 pub const INBOX_PROJECT_ID: &str = "inbox";
+/// How many past versions of an artifact's source to keep around.
+const MAX_VERSIONS_KEPT: usize = 20;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct Project {
     #[serde(rename = "schemaVersion")]
     pub schema_version: u32,
@@ -21,7 +24,7 @@ pub struct Project {
     pub updated_at: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct ArtifactManifest {
     #[serde(rename = "schemaVersion")]
     pub schema_version: u32,
@@ -40,6 +43,13 @@ pub struct ArtifactManifest {
     pub created_at: String,
     #[serde(rename = "updatedAt")]
     pub updated_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct ArtifactVersion {
+    /// Sortable snapshot id (also its filename under versions/) - newest sorts last.
+    pub timestamp: String,
+    pub size: u64,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -210,4 +220,72 @@ pub fn detect_type_from_extension(filename: &str) -> Option<&'static str> {
         .iter()
         .find(|(candidate, _)| *candidate == ext)
         .map(|(_, artifact_type)| *artifact_type)
+}
+
+/// Reverse of `detect_type_from_extension`, for creating an artifact from raw
+/// content (no source file to sniff an extension from). Only text-based types
+/// are supported - image/pdf artifacts arrive as real files via import, not
+/// as inline content from a tool call.
+pub fn extension_for_type(artifact_type: &str) -> Option<&'static str> {
+    match artifact_type {
+        "html" => Some("html"),
+        "svg" => Some("svg"),
+        "markdown" => Some("md"),
+        "jsx" => Some("jsx"),
+        "tsx" => Some("tsx"),
+        _ => None,
+    }
+}
+
+pub fn versions_dir(library_root: &Path, project_id: &str, artifact_id: &str) -> PathBuf {
+    artifact_dir(library_root, project_id, artifact_id).join("versions")
+}
+
+/// Copies an artifact's current source into its version history before it
+/// gets overwritten. Called on every save (manual or AI-driven, since both
+/// paths go through the same save_artifact_source command) and before a
+/// restore, so restoring is itself never destructive.
+pub fn snapshot_current_source(library_root: &Path, manifest: &ArtifactManifest) -> Result<()> {
+    let source_path =
+        artifact_dir(library_root, &manifest.project_id, &manifest.id).join(&manifest.source_file);
+    if !source_path.exists() {
+        return Ok(());
+    }
+    let dir = versions_dir(library_root, &manifest.project_id, &manifest.id);
+    fs::create_dir_all(&dir)?;
+    let stamp = chrono::Utc::now().format("%Y%m%dT%H%M%S%3fZ").to_string();
+    fs::copy(&source_path, dir.join(&stamp))?;
+    prune_versions(&dir, MAX_VERSIONS_KEPT)?;
+    Ok(())
+}
+
+fn prune_versions(dir: &Path, keep: usize) -> Result<()> {
+    let mut entries: Vec<PathBuf> = fs::read_dir(dir)?.filter_map(|e| e.ok().map(|e| e.path())).collect();
+    entries.sort();
+    if entries.len() > keep {
+        for old in &entries[..entries.len() - keep] {
+            let _ = fs::remove_file(old);
+        }
+    }
+    Ok(())
+}
+
+pub fn list_versions(
+    library_root: &Path,
+    project_id: &str,
+    artifact_id: &str,
+) -> Result<Vec<ArtifactVersion>> {
+    let dir = versions_dir(library_root, project_id, artifact_id);
+    let mut versions = Vec::new();
+    if !dir.exists() {
+        return Ok(versions);
+    }
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let timestamp = entry.file_name().to_string_lossy().to_string();
+        let size = entry.metadata()?.len();
+        versions.push(ArtifactVersion { timestamp, size });
+    }
+    versions.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    Ok(versions)
 }

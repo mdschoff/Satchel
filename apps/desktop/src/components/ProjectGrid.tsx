@@ -1,5 +1,6 @@
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { useLibraryStore } from "../state/library";
+import { backend } from "../lib/tauri";
 
 const TYPE_LABEL: Record<string, string> = {
   html: "HTML",
@@ -31,11 +32,25 @@ export function ProjectGrid() {
     await importPaths(paths);
   }
 
+  async function handleExportClick() {
+    if (!project) return;
+    const destPath = await save({
+      title: "Export project",
+      defaultPath: `${project.name}.zip`,
+      filters: [{ name: "Zip archive", extensions: ["zip"] }],
+    });
+    if (!destPath) return;
+    await backend.exportProject(project.id, destPath);
+  }
+
   return (
     <div className="project-grid-view">
       <header className="project-grid-header">
         <h1>{project?.name ?? "Project"}</h1>
-        <button onClick={handleImportClick}>Import files…</button>
+        <div className="project-grid-header-actions">
+          <button onClick={handleExportClick}>Export…</button>
+          <button onClick={handleImportClick}>Import files…</button>
+        </div>
       </header>
 
       {artifacts.length === 0 ? (

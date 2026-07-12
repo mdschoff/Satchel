@@ -1,3 +1,4 @@
+pub mod export;
 pub mod ingest;
 pub mod index;
 pub mod library;
