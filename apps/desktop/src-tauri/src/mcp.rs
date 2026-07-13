@@ -17,7 +17,12 @@ use rmcp::transport::streamable_http_server::{
 use rmcp::{tool, tool_handler, tool_router, ErrorData as McpError, ServerHandler};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
+
+/// Event the backend emits to the frontend whenever an MCP tool mutates the
+/// library, so the UI can refresh the grid and live-reload an open artifact
+/// as an AI client works through it. Payload carries the affected ids.
+const LIBRARY_CHANGED_EVENT: &str = "library:changed";
 
 /// Bound to localhost only - this is a convenience for tools running on the
 /// same machine, not a general-purpose network service.
@@ -105,6 +110,12 @@ impl SatchelMcpServer {
         Self { app }
     }
 
+    /// Best-effort notify the UI that the library changed. Never fails a tool
+    /// call - a missing listener (e.g. window still loading) is fine.
+    fn emit_change(&self, payload: serde_json::Value) {
+        let _ = self.app.emit(LIBRARY_CHANGED_EVENT, payload);
+    }
+
     #[tool(description = "List every project (folder) in the Satchel library. Projects can be \
         nested via parentId; a null parentId means top-level.")]
     async fn list_projects(&self) -> Result<Json<ProjectsResult>, McpError> {
@@ -120,9 +131,13 @@ impl SatchelMcpServer {
         Parameters(CreateProjectParams { name, parent_id }): Parameters<CreateProjectParams>,
     ) -> Result<Json<Project>, McpError> {
         let state = self.app.state::<AppState>();
-        commands::library::create_project(state, name, None, parent_id)
-            .map(Json)
-            .map_err(mcp_err)
+        let project =
+            commands::library::create_project(state, name, None, parent_id).map_err(mcp_err)?;
+        self.emit_change(serde_json::json!({
+            "kind": "project-created",
+            "projectId": project.id,
+        }));
+        Ok(Json(project))
     }
 
     #[tool(description = "List the artifacts inside a project.")]
@@ -165,15 +180,20 @@ impl SatchelMcpServer {
         Parameters(params): Parameters<CreateArtifactParams>,
     ) -> Result<Json<ArtifactManifest>, McpError> {
         let state = self.app.state::<AppState>();
-        commands::library::create_artifact_from_content(
+        let manifest = commands::library::create_artifact_from_content(
             state,
             params.project_id,
             params.title,
             params.artifact_type,
             params.content,
         )
-        .map(Json)
-        .map_err(mcp_err)
+        .map_err(mcp_err)?;
+        self.emit_change(serde_json::json!({
+            "kind": "artifact-created",
+            "projectId": manifest.project_id,
+            "artifactId": manifest.id,
+        }));
+        Ok(Json(manifest))
     }
 
     #[tool(description = "Overwrite an existing artifact's content. The prior content is kept \
@@ -185,8 +205,15 @@ impl SatchelMcpServer {
         >,
     ) -> Result<String, McpError> {
         let state = self.app.state::<AppState>();
+        let pid = project_id.clone();
+        let aid = artifact_id.clone();
         commands::library::save_artifact_source(state, project_id, artifact_id, content)
             .map_err(mcp_err)?;
+        self.emit_change(serde_json::json!({
+            "kind": "artifact-updated",
+            "projectId": pid,
+            "artifactId": aid,
+        }));
         Ok("Artifact updated.".to_string())
     }
 
