@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { ArtifactManifest, Project } from "@satchel/artifact-core";
 import { INBOX_PROJECT_ID } from "@satchel/artifact-core";
 import { backend } from "../lib/tauri";
+import { useUiStore } from "./ui";
 
 interface LibraryState {
   projects: Project[];
@@ -50,6 +51,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   },
 
   async selectProject(projectId: string) {
+    // Selecting a project always lands you on its grid - leave Settings if open.
+    useUiStore.getState().setView("library");
     set({ selectedProjectId: projectId, selectedArtifactId: null });
     await get().refreshArtifacts();
   },
@@ -137,6 +140,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   },
 
   openSearchResult(artifact: ArtifactManifest) {
+    useUiStore.getState().setView("library");
     set({
       selectedProjectId: artifact.projectId,
       selectedArtifactId: artifact.id,
