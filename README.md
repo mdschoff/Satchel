@@ -1,5 +1,8 @@
 # Satchel
 
+[![CI](https://github.com/mdschoff/satchel/actions/workflows/ci.yml/badge.svg)](https://github.com/mdschoff/satchel/actions/workflows/ci.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+
 A local-first desktop workspace for artifacts your AI makes — HTML, SVG, React components, Markdown, images, PDFs. Drag them in, organize them into projects, open them live and interactive, and keep editing them by hand or with AI.
 
 ## Why
