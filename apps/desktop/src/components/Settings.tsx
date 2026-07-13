@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { aiProviders } from "../ai/registry";
 import { useApiKeyStore } from "../state/apiKeys";
 import { useSettingsStore } from "../state/settings";
@@ -15,10 +15,14 @@ export function Settings() {
   const loadKey = useApiKeyStore((s) => s.loadKey);
   const setKey = useApiKeyStore((s) => s.setKey);
 
+  const [selectedId, setSelectedId] = useState(aiProviders[0]?.id ?? "");
+  const provider = aiProviders.find((p) => p.id === selectedId) ?? aiProviders[0];
+  const settings = provider ? providerSettings[provider.id] ?? {} : {};
+
   useEffect(() => {
-    for (const provider of aiProviders) {
-      if (provider.requiresApiKey) {
-        loadKey(provider.id);
+    for (const p of aiProviders) {
+      if (p.requiresApiKey) {
+        loadKey(p.id);
       }
     }
   }, [loadKey]);
@@ -39,51 +43,60 @@ export function Settings() {
           you don't use.
         </p>
 
-        {aiProviders.map((provider) => {
-          const settings = providerSettings[provider.id] ?? {};
-          return (
-            <div key={provider.id} className="settings-provider-card">
-              <h3>{provider.label}</h3>
-              <div className="settings-field-grid">
-                {provider.requiresApiKey && (
-                  <label>
-                    API key
-                    <input
-                      type="password"
-                      value={keys[provider.id] ?? ""}
-                      onChange={(e) => setKey(provider.id, e.currentTarget.value)}
-                      placeholder="sk-…"
-                    />
-                  </label>
-                )}
+        {provider && (
+          <div className="settings-provider-card">
+            <div className="settings-field-grid">
+              <label>
+                Provider
+                <select
+                  value={selectedId}
+                  onChange={(e) => setSelectedId(e.currentTarget.value)}
+                >
+                  {aiProviders.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {provider.requiresApiKey && (
                 <label>
-                  Model
+                  API key
                   <input
-                    type="text"
-                    value={settings.model ?? ""}
-                    onChange={(e) =>
-                      updateProviderSettings(provider.id, { model: e.currentTarget.value })
-                    }
-                    placeholder="default"
+                    type="password"
+                    value={keys[provider.id] ?? ""}
+                    onChange={(e) => setKey(provider.id, e.currentTarget.value)}
+                    placeholder="sk-…"
                   />
                 </label>
-                {!provider.requiresApiKey && (
-                  <label>
-                    Base URL
-                    <input
-                      type="text"
-                      value={settings.baseUrl ?? ""}
-                      onChange={(e) =>
-                        updateProviderSettings(provider.id, { baseUrl: e.currentTarget.value })
-                      }
-                      placeholder="http://localhost:11434"
-                    />
-                  </label>
-                )}
-              </div>
+              )}
+              <label>
+                Model
+                <input
+                  type="text"
+                  value={settings.model ?? ""}
+                  onChange={(e) =>
+                    updateProviderSettings(provider.id, { model: e.currentTarget.value })
+                  }
+                  placeholder="default"
+                />
+              </label>
+              {!provider.requiresApiKey && (
+                <label>
+                  Base URL
+                  <input
+                    type="text"
+                    value={settings.baseUrl ?? ""}
+                    onChange={(e) =>
+                      updateProviderSettings(provider.id, { baseUrl: e.currentTarget.value })
+                    }
+                    placeholder="http://localhost:11434"
+                  />
+                </label>
+              )}
             </div>
-          );
-        })}
+          </div>
+        )}
 
         <h2>MCP server</h2>
         <p className="settings-hint">

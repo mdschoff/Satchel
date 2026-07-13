@@ -1,9 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { getVersion } from "@tauri-apps/api/app";
 import type { Project } from "@satchel/artifact-core";
 import { INBOX_PROJECT_ID } from "@satchel/artifact-core";
 import { useLibraryStore } from "../state/library";
 import { useUiStore } from "../state/ui";
+
+// dev = running against the Vite dev server (latest source, hot-reloaded);
+// packaged = a built .app with frozen assets. import.meta.env.DEV tells them apart.
+const BUILD_CHANNEL = import.meta.env.DEV ? "dev" : "packaged";
 
 const TYPE_LABEL: Record<string, string> = {
   html: "HTML",
@@ -30,6 +35,11 @@ export function Sidebar() {
 
   const [creatingParentId, setCreatingParentId] = useState<string | null | undefined>(undefined);
   const [newName, setNewName] = useState("");
+  const [version, setVersion] = useState("");
+
+  useEffect(() => {
+    getVersion().then(setVersion).catch(() => setVersion("?"));
+  }, []);
 
   const inbox = projects.find((p) => p.id === INBOX_PROJECT_ID);
   const byParent = new Map<string | null, Project[]>();
@@ -134,7 +144,7 @@ export function Sidebar() {
                   className="search-result-item"
                   onClick={() => openSearchResult(artifact)}
                 >
-                  <span className="artifact-card-type">
+                  <span className={`artifact-card-type type-${artifact.type}`}>
                     {TYPE_LABEL[artifact.type] ?? artifact.type}
                   </span>
                   <span className="search-result-title">{artifact.title}</span>
@@ -182,6 +192,10 @@ export function Sidebar() {
       <button className="settings-button" onClick={() => setView("settings")}>
         Settings
       </button>
+
+      <div className="build-stamp" title="App version · build commit · channel">
+        v{version || "…"} · {__GIT_SHA__} · {BUILD_CHANNEL}
+      </div>
     </nav>
   );
 }
