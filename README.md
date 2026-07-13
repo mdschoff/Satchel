@@ -42,7 +42,13 @@ AI tools generate a lot of one-off, throwaway artifacts. Satchel gives them a pe
 
 Grab the latest installer from [Releases](https://github.com/mdschoff/satchel/releases) — a universal `.dmg` for macOS (Apple Silicon + Intel) or an `.msi` for Windows. Each release ships a `SHA256SUMS.txt` if you want to verify your download.
 
-> **macOS note:** builds aren't signed with an Apple Developer certificate yet, so the first launch requires **right-click → Open** (once, then it opens normally).
+> **macOS note:** builds aren't signed with an Apple Developer certificate yet, so Gatekeeper will claim the app is "damaged" and offer to move it to the Trash. It isn't — that's the quarantine flag on an unsigned download. After dragging Satchel to Applications, clear it once:
+>
+> ```bash
+> xattr -cr /Applications/Satchel.app
+> ```
+>
+> Then it opens normally from that point on.
 
 ### Run from source
 
