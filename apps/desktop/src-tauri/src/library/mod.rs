@@ -296,3 +296,177 @@ pub fn list_versions(
     versions.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
     Ok(versions)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_root() -> tempfile::TempDir {
+        tempfile::tempdir().expect("tempdir")
+    }
+
+    fn sample_project(id: &str, name: &str, parent: Option<&str>) -> Project {
+        let now = now_iso();
+        Project {
+            schema_version: CURRENT_SCHEMA_VERSION,
+            id: id.to_string(),
+            name: name.to_string(),
+            color: None,
+            parent_id: parent.map(str::to_string),
+            created_at: now.clone(),
+            updated_at: now,
+        }
+    }
+
+    fn sample_manifest(project_id: &str, artifact_id: &str) -> ArtifactManifest {
+        let now = now_iso();
+        ArtifactManifest {
+            schema_version: CURRENT_SCHEMA_VERSION,
+            id: artifact_id.to_string(),
+            project_id: project_id.to_string(),
+            title: "Test artifact".to_string(),
+            artifact_type: "html".to_string(),
+            source_file: "source.html".to_string(),
+            tags: vec!["a".to_string()],
+            source_note: None,
+            created_at: now.clone(),
+            updated_at: now,
+        }
+    }
+
+    #[test]
+    fn init_creates_inbox_and_is_idempotent() {
+        let root = temp_root();
+        ensure_library_initialized(root.path()).unwrap();
+        ensure_library_initialized(root.path()).unwrap(); // second run is a no-op
+
+        let projects = list_projects(root.path()).unwrap();
+        assert_eq!(projects.len(), 1);
+        assert_eq!(projects[0].id, INBOX_PROJECT_ID);
+        assert_eq!(projects[0].name, "Inbox");
+    }
+
+    #[test]
+    fn project_roundtrip_and_missing_read() {
+        let root = temp_root();
+        ensure_library_initialized(root.path()).unwrap();
+
+        let project = sample_project("p1", "My Project", None);
+        write_project(root.path(), &project).unwrap();
+
+        let read = read_project(root.path(), "p1").unwrap();
+        assert_eq!(read.name, "My Project");
+        assert_eq!(read.parent_id, None);
+
+        assert!(matches!(
+            read_project(root.path(), "nope"),
+            Err(LibraryError::NotFound(_))
+        ));
+
+        // Nested project keeps its parent linkage.
+        let child = sample_project("p2", "Child", Some("p1"));
+        write_project(root.path(), &child).unwrap();
+        assert_eq!(
+            read_project(root.path(), "p2").unwrap().parent_id.as_deref(),
+            Some("p1")
+        );
+
+        let mut ids: Vec<String> = list_projects(root.path())
+            .unwrap()
+            .into_iter()
+            .map(|p| p.id)
+            .collect();
+        ids.sort();
+        assert_eq!(ids, vec!["inbox", "p1", "p2"]);
+    }
+
+    #[test]
+    fn manifest_roundtrip_and_listing() {
+        let root = temp_root();
+        ensure_library_initialized(root.path()).unwrap();
+        write_project(root.path(), &sample_project("p1", "P", None)).unwrap();
+
+        let manifest = sample_manifest("p1", "a1");
+        write_manifest(root.path(), &manifest).unwrap();
+
+        let read = read_manifest(root.path(), "p1", "a1").unwrap();
+        assert_eq!(read.title, "Test artifact");
+        assert_eq!(read.tags, vec!["a"]);
+
+        assert!(matches!(
+            read_manifest(root.path(), "p1", "missing"),
+            Err(LibraryError::NotFound(_))
+        ));
+
+        let listed = list_artifacts(root.path(), "p1").unwrap();
+        assert_eq!(listed.len(), 1);
+
+        let (projects, artifacts) = list_all_manifests(root.path()).unwrap();
+        assert_eq!(projects.len(), 2); // inbox + p1
+        assert_eq!(artifacts.len(), 1);
+    }
+
+    #[test]
+    fn version_snapshots_order_newest_first_and_prune() {
+        let root = temp_root();
+        ensure_library_initialized(root.path()).unwrap();
+        write_project(root.path(), &sample_project("p1", "P", None)).unwrap();
+        let manifest = sample_manifest("p1", "a1");
+        write_manifest(root.path(), &manifest).unwrap();
+
+        let source_path = artifact_dir(root.path(), "p1", "a1").join("source.html");
+
+        // No source file yet -> snapshotting is a harmless no-op.
+        snapshot_current_source(root.path(), &manifest).unwrap();
+        assert!(list_versions(root.path(), "p1", "a1").unwrap().is_empty());
+
+        // Mirror save_artifact_source's order - snapshot the current content,
+        // THEN overwrite - for more saves than the retention cap.
+        let total = MAX_VERSIONS_KEPT + 3;
+        for i in 0..total {
+            snapshot_current_source(root.path(), &manifest).unwrap();
+            fs::write(&source_path, format!("<p>rev {i}</p>")).unwrap();
+            // Version filenames have millisecond resolution; keep them unique.
+            std::thread::sleep(std::time::Duration::from_millis(3));
+        }
+
+        let versions = list_versions(root.path(), "p1", "a1").unwrap();
+        assert_eq!(versions.len(), MAX_VERSIONS_KEPT, "prune caps retention");
+
+        // Newest first.
+        let stamps: Vec<&String> = versions.iter().map(|v| &v.timestamp).collect();
+        let mut sorted = stamps.clone();
+        sorted.sort_by(|a, b| b.cmp(a));
+        assert_eq!(stamps, sorted);
+
+        // The newest surviving snapshot holds the second-to-last content
+        // (a snapshot preserves what was on disk *before* each overwrite).
+        let newest = versions_dir(root.path(), "p1", "a1").join(&versions[0].timestamp);
+        let content = fs::read_to_string(newest).unwrap();
+        assert_eq!(content, format!("<p>rev {}</p>", total - 2));
+    }
+
+    #[test]
+    fn type_detection_maps_both_ways() {
+        assert_eq!(detect_type_from_extension("page.HTML"), Some("html"));
+        assert_eq!(detect_type_from_extension("chart.svg"), Some("svg"));
+        assert_eq!(detect_type_from_extension("notes.md"), Some("markdown"));
+        assert_eq!(detect_type_from_extension("App.tsx"), Some("tsx"));
+        assert_eq!(detect_type_from_extension("photo.JPeG"), Some("image"));
+        assert_eq!(detect_type_from_extension("doc.pdf"), Some("pdf"));
+        assert_eq!(detect_type_from_extension("mystery.xyz"), None);
+        assert_eq!(detect_type_from_extension("no-extension"), None);
+
+        for t in ["html", "svg", "markdown", "jsx", "tsx"] {
+            let ext = extension_for_type(t).expect("text types are creatable inline");
+            assert_eq!(
+                detect_type_from_extension(&format!("f.{ext}")),
+                Some(t),
+                "extension_for_type({t}) must round-trip"
+            );
+        }
+        // Binary types arrive as files, never as inline content.
+        assert_eq!(extension_for_type("image"), None);
+        assert_eq!(extension_for_type("pdf"), None);
+    }
+}
