@@ -120,6 +120,7 @@ button:hover {
 }
 
 .new-project-button,
+.import-project-button,
 .settings-button {
   margin-top: 0.5rem;
   background: transparent;

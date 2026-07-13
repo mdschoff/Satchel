@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
 import type { Project } from "@satchel/artifact-core";
 import { INBOX_PROJECT_ID } from "@satchel/artifact-core";
 import { useLibraryStore } from "../state/library";
@@ -19,6 +20,7 @@ export function Sidebar() {
   const selectedProjectId = useLibraryStore((s) => s.selectedProjectId);
   const selectProject = useLibraryStore((s) => s.selectProject);
   const createProject = useLibraryStore((s) => s.createProject);
+  const importProject = useLibraryStore((s) => s.importProject);
   const searchQuery = useLibraryStore((s) => s.searchQuery);
   const searchResults = useLibraryStore((s) => s.searchResults);
   const search = useLibraryStore((s) => s.search);
@@ -39,6 +41,15 @@ export function Sidebar() {
   }
   for (const list of byParent.values()) {
     list.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async function handleImportProjectClick() {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "Satchel project", extensions: ["zip"] }],
+    });
+    if (!selected) return;
+    await importProject(selected as string);
   }
 
   async function submitNewProject() {
@@ -161,6 +172,9 @@ export function Sidebar() {
             }}
           >
             + New Project
+          </button>
+          <button className="import-project-button" onClick={handleImportProjectClick}>
+            Import project…
           </button>
         </>
       )}

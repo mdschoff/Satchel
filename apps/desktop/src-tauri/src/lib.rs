@@ -54,6 +54,7 @@ pub fn run() {
             commands::library::restore_artifact_version,
             commands::library::create_artifact_from_content,
             commands::export::export_project,
+            commands::export::import_project,
             commands::ingest::import_artifact,
             commands::index::rebuild_index,
             commands::index::search_artifacts,
