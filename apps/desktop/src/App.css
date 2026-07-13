@@ -855,6 +855,40 @@ button:active {
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 0.9em;
   color: var(--accent);
+  user-select: text;
+}
+
+.settings-mcp-block {
+  display: block;
+  margin: 0;
+  padding: 0.6rem 0.7rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.82em;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+}
+
+.settings-mcp-example {
+  margin: var(--sp-3) 0 0;
+}
+
+.settings-mcp-example em {
+  color: var(--text);
+}
+
+.chat-drawer-mcp-note {
+  margin: var(--sp-1) 0 0;
+  font-size: 0.8em;
+  line-height: 1.45;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  padding-top: var(--sp-3);
 }
 
 /* ============================================================

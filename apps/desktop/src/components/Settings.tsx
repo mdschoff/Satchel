@@ -6,6 +6,15 @@ import { useUiStore } from "../state/ui";
 
 // Must match MCP_PORT in apps/desktop/src-tauri/src/mcp.rs.
 const MCP_URL = "http://127.0.0.1:7825/mcp";
+const CLAUDE_CODE_CMD = `claude mcp add --transport http satchel ${MCP_URL}`;
+const MCP_JSON = `{
+  "mcpServers": {
+    "satchel": {
+      "type": "http",
+      "url": "${MCP_URL}"
+    }
+  }
+}`;
 
 export function Settings() {
   const setView = useUiStore((s) => s.setView);
@@ -98,13 +107,31 @@ export function Settings() {
           </div>
         )}
 
-        <h2>MCP server</h2>
+        <h2>Edit with your subscription (MCP)</h2>
         <p className="settings-hint">
-          Satchel runs a local MCP server (localhost only) so MCP-aware tools - Claude Code,
-          Claude Desktop, Cursor - can list, search, and create artifacts directly.
+          Prefer your existing Claude or Codex subscription over an API key? Point an MCP client
+          (Claude Code, Claude Desktop, Cursor) at Satchel's local server, then just ask it to edit
+          an artifact by name - changes appear live in this window, with each edit saved to history.
         </p>
         <div className="settings-provider-card">
-          <code className="settings-mcp-url">{MCP_URL}</code>
+          <div className="settings-field-grid">
+            <label>
+              Endpoint (localhost only)
+              <code className="settings-mcp-url">{MCP_URL}</code>
+            </label>
+            <label>
+              Claude Code — one command
+              <code className="settings-mcp-block">{CLAUDE_CODE_CMD}</code>
+            </label>
+            <label>
+              Claude Desktop / Cursor — add to mcpServers
+              <pre className="settings-mcp-block">{MCP_JSON}</pre>
+            </label>
+          </div>
+          <p className="settings-hint settings-mcp-example">
+            Then in your client: <em>“In Satchel, open the counter artifact in Test and add a reset
+            button.”</em>
+          </p>
         </div>
       </div>
     </div>
