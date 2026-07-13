@@ -38,6 +38,14 @@ AI tools generate a lot of one-off, throwaway artifacts. Satchel gives them a pe
 
 ## Getting started
 
+### Download
+
+Grab the latest installer from [Releases](https://github.com/mdschoff/satchel/releases) — a universal `.dmg` for macOS (Apple Silicon + Intel) or an `.msi` for Windows. Each release ships a `SHA256SUMS.txt` if you want to verify your download.
+
+> **macOS note:** builds aren't signed with an Apple Developer certificate yet, so the first launch requires **right-click → Open** (once, then it opens normally).
+
+### Run from source
+
 Requires [pnpm](https://pnpm.io) and the [Rust toolchain](https://rustup.rs).
 
 ```bash
@@ -45,7 +53,7 @@ pnpm install
 pnpm dev
 ```
 
-To build a distributable app:
+To build a distributable app yourself:
 
 ```bash
 pnpm --filter @satchel/desktop tauri build
