@@ -35,4 +35,16 @@ export const backend = {
   exportProject: (projectId: string, destPath: string) =>
     invoke<void>("export_project", { projectId, destPath }),
   importProject: (zipPath: string) => invoke<Project>("import_project", { zipPath }),
+  createArtifactFromContent: (
+    projectId: string | null,
+    title: string,
+    artifactType: string,
+    content: string,
+  ) =>
+    invoke<ArtifactManifest>("create_artifact_from_content", {
+      projectId,
+      title,
+      artifactType,
+      content,
+    }),
 };

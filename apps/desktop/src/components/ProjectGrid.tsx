@@ -4,6 +4,7 @@ import { useLibraryStore } from "../state/library";
 import { useUiStore } from "../state/ui";
 import { useDndStore } from "../state/dnd";
 import { backend } from "../lib/tauri";
+import { sniffContent } from "../lib/sniffContent";
 import { ArtifactThumbnail } from "./ArtifactThumbnail";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -57,6 +58,30 @@ export function ProjectGrid() {
   useEffect(() => {
     setSelected(new Set());
   }, [selectedProjectId]);
+
+  // ⌘V anywhere on the grid turns clipboard text into a new artifact -
+  // the fastest path from "AI chat output" to "in the library". Skipped when
+  // the paste is aimed at a real text field (search box, rename input).
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      const text = e.clipboardData?.getData("text/plain") ?? "";
+      if (!text.trim()) return;
+      e.preventDefault();
+      const { artifactType, title } = sniffContent(text);
+      useLibraryStore.getState().createFromContent(title, artifactType, text);
+    };
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, []);
 
   // Close the context menu on Escape.
   useEffect(() => {
@@ -215,7 +240,8 @@ export function ProjectGrid() {
 
       {artifacts.length === 0 ? (
         <div className="empty-state">
-          Drag files anywhere in this window, or use Import files… to add artifacts here.
+          Drag files anywhere in this window, paste (⌘V) something an AI just made, or use Import
+          files… to add artifacts here.
         </div>
       ) : (
         <div className="artifact-grid">

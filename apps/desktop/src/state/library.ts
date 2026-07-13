@@ -21,6 +21,7 @@ interface LibraryState {
   deleteProject: (projectId: string) => Promise<void>;
   importPaths: (paths: string[]) => Promise<void>;
   importProject: (zipPath: string) => Promise<void>;
+  createFromContent: (title: string, artifactType: string, content: string) => Promise<void>;
   selectArtifact: (artifactId: string | null) => void;
   refreshArtifacts: () => Promise<void>;
   moveArtifact: (artifactId: string, fromProjectId: string, toProjectId: string) => Promise<void>;
@@ -107,6 +108,15 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       const project = await backend.importProject(zipPath);
       await get().loadProjects();
       await get().selectProject(project.id);
+    } catch (err) {
+      set({ error: String(err) });
+    }
+  },
+
+  async createFromContent(title: string, artifactType: string, content: string) {
+    try {
+      await backend.createArtifactFromContent(get().selectedProjectId, title, artifactType, content);
+      await get().refreshArtifacts();
     } catch (err) {
       set({ error: String(err) });
     }
