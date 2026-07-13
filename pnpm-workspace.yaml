@@ -3,5 +3,7 @@ packages:
   - "packages/*"
   - "packages/renderers/*"
   - "packages/ai-providers/*"
+allowBuilds:
+  esbuild: true
 onlyBuiltDependencies:
   - esbuild

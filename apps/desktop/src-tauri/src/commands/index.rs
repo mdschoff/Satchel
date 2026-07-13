@@ -1,3 +1,4 @@
+use crate::library::ArtifactManifest;
 use crate::{db, library, AppState};
 use tauri::State;
 
@@ -13,7 +14,7 @@ pub fn rebuild_index(state: State<AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn search_artifacts(state: State<AppState>, query: String) -> Result<Vec<String>, String> {
+pub fn search_artifacts(state: State<AppState>, query: String) -> Result<Vec<ArtifactManifest>, String> {
     let conn = state.db.lock().map_err(|e| e.to_string())?;
     db::search_artifacts(&conn, &query).map_err(|e| e.to_string())
 }

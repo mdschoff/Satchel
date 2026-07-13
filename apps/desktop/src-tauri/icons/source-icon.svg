@@ -1,0 +1,25 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" rx="200" fill="#221812"/>
+
+  <!-- strap / handle, faceted chevron -->
+  <polygon points="340,440 512,260 512,320" fill="#E0AD6D"/>
+  <polygon points="340,440 512,320 390,440" fill="#C68B4B"/>
+  <polygon points="512,260 684,440 634,440" fill="#8B5A2B"/>
+  <polygon points="512,260 634,440 512,320" fill="#6B4226"/>
+
+  <!-- flap -->
+  <polygon points="300,380 724,380 752,470" fill="#9C6832"/>
+  <polygon points="300,380 752,470 272,470" fill="#4A2E1D"/>
+
+  <!-- body, fan-triangulated from center -->
+  <polygon points="512,650 272,470 752,470" fill="#C68B4B"/>
+  <polygon points="512,650 752,470 752,780" fill="#6B4226"/>
+  <polygon points="512,650 752,780 690,830" fill="#4A2E1D"/>
+  <polygon points="512,650 690,830 334,830" fill="#3A2416"/>
+  <polygon points="512,650 334,830 272,780" fill="#5C3A22"/>
+  <polygon points="512,650 272,780 272,470" fill="#A66E3D"/>
+
+  <!-- buckle accent -->
+  <polygon points="512,520 548,556 512,592" fill="#E0AD6D"/>
+  <polygon points="512,520 512,592 476,556" fill="#C68B4B"/>
+</svg>

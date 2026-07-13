@@ -21,11 +21,12 @@ Single persistent window, not a two-window "launcher then workspace" model:
 library/
 ├── projects/
 │   ├── <project-id>/
-│   │   ├── project.json          # name, color, createdAt/updatedAt, parentId (reserved for nested folders)
+│   │   ├── project.json          # name, color, createdAt/updatedAt, parentId (nested sub-projects)
 │   │   └── artifacts/
 │   │       └── <artifact-id>/
 │   │           ├── manifest.json # title, type, tags, sourceFile, sourceNote, timestamps
-│   │           └── source.*      # the actual artifact content
+│   │           ├── source.*      # the actual artifact content
+│   │           └── versions/     # snapshots taken before each overwrite (manual or AI edit)
 │   └── inbox/                    # default landing spot for unsorted imports
 └── index.sqlite                  # metadata cache only - rebuildable from the files above
 ```
@@ -44,3 +45,7 @@ Both registries live in `apps/desktop/src/renderers/registry.ts` and `apps/deskt
 ## Rendering/sandboxing
 
 Rendered artifacts load into an `<iframe sandbox="allow-scripts" srcDoc="...">` - no `allow-same-origin`, so artifact code can't reach the host app's state or storage even though it can run scripts.
+
+## MCP server
+
+The Rust backend also runs a localhost-only MCP server (`apps/desktop/src-tauri/src/mcp.rs`, Streamable HTTP via `rmcp`) exposing the library as tools - `list_projects`, `search_artifacts`, `create_artifact`, etc. Tool handlers call the exact same command functions the Tauri IPC layer uses (obtained via `AppHandle::state()`), so there's no logic duplicated between the two transports. See [docs/mcp-server.md](mcp-server.md) for the tool list and client setup.

@@ -4,6 +4,7 @@ import { useLibraryStore } from "../state/library";
 import { backend } from "../lib/tauri";
 import { getRenderer } from "../renderers/registry";
 import { ChatDrawer } from "./ChatDrawer";
+import { VersionHistory } from "./VersionHistory";
 
 const EDITABLE_TYPES = new Set(["html", "svg", "markdown", "jsx", "tsx"]);
 const MONACO_LANGUAGE: Record<string, string> = {
@@ -18,6 +19,7 @@ export function ArtifactView() {
   const selectedProjectId = useLibraryStore((s) => s.selectedProjectId);
   const selectedArtifactId = useLibraryStore((s) => s.selectedArtifactId);
   const selectArtifact = useLibraryStore((s) => s.selectArtifact);
+  const deleteArtifact = useLibraryStore((s) => s.deleteArtifact);
   const artifact = useLibraryStore((s) => s.artifacts.find((a) => a.id === s.selectedArtifactId));
 
   const [source, setSource] = useState<string>("");
@@ -25,6 +27,7 @@ export function ArtifactView() {
   const [compileError, setCompileError] = useState<string | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const renderSource = useCallback(
@@ -56,23 +59,22 @@ export function ArtifactView() {
     [artifact],
   );
 
-  useEffect(() => {
-    if (!artifact || !selectedArtifactId) return;
-    let cancelled = false;
-    backend
+  const loadSource = useCallback(() => {
+    if (!selectedArtifactId) return;
+    return backend
       .getArtifactSource(selectedProjectId, selectedArtifactId)
       .then((content) => {
-        if (cancelled) return;
         setSource(content);
         renderSource(content);
       })
       .catch((err) => {
-        if (cancelled) return;
         setCompileError(`Couldn't load this artifact: ${String(err)}`);
       });
-    return () => {
-      cancelled = true;
-    };
+  }, [selectedProjectId, selectedArtifactId, renderSource]);
+
+  useEffect(() => {
+    if (!artifact || !selectedArtifactId) return;
+    loadSource();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedArtifactId]);
 
@@ -113,7 +115,20 @@ export function ArtifactView() {
               {isEditorOpen ? "Hide code" : "Show code"}
             </button>
           )}
+          <button onClick={() => setIsHistoryOpen((v) => !v)}>
+            {isHistoryOpen ? "Close history" : "History"}
+          </button>
           <button onClick={() => setIsChatOpen((v) => !v)}>{isChatOpen ? "Close chat" : "Ask AI"}</button>
+          <button
+            className="delete-button"
+            onClick={() => {
+              if (window.confirm(`Delete "${artifact.title}"? This can't be undone.`)) {
+                deleteArtifact(artifact.id);
+              }
+            }}
+          >
+            Delete
+          </button>
         </div>
       </header>
 
@@ -142,6 +157,15 @@ export function ArtifactView() {
             />
           )}
         </div>
+
+        {isHistoryOpen && (
+          <VersionHistory
+            projectId={selectedProjectId}
+            artifactId={artifact.id}
+            onRestored={loadSource}
+            onClose={() => setIsHistoryOpen(false)}
+          />
+        )}
 
         {isChatOpen && (
           <ChatDrawer artifact={artifact} source={source} onApplyEdit={handleAIEdit} />

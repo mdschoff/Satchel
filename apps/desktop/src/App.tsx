@@ -1,9 +1,11 @@
 import { useEffect } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useLibraryStore } from "./state/library";
+import { useUiStore } from "./state/ui";
 import { Sidebar } from "./components/Sidebar";
 import { ProjectGrid } from "./components/ProjectGrid";
 import { ArtifactView } from "./components/ArtifactView";
+import { Settings } from "./components/Settings";
 import "./App.css";
 
 export default function App() {
@@ -11,6 +13,7 @@ export default function App() {
   const importPaths = useLibraryStore((s) => s.importPaths);
   const selectedArtifactId = useLibraryStore((s) => s.selectedArtifactId);
   const error = useLibraryStore((s) => s.error);
+  const view = useUiStore((s) => s.view);
 
   useEffect(() => {
     loadProjects();
@@ -37,7 +40,13 @@ export default function App() {
             <button onClick={() => useLibraryStore.setState({ error: null })}>Dismiss</button>
           </div>
         )}
-        {selectedArtifactId ? <ArtifactView /> : <ProjectGrid />}
+        {view === "settings" ? (
+          <Settings />
+        ) : selectedArtifactId ? (
+          <ArtifactView />
+        ) : (
+          <ProjectGrid />
+        )}
       </main>
     </div>
   );

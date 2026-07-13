@@ -1,4 +1,4 @@
-use crate::library::{ArtifactManifest, Project};
+use crate::library::{ArtifactManifest, Project, CURRENT_SCHEMA_VERSION};
 use rusqlite::Connection;
 use std::path::Path;
 
@@ -84,6 +84,11 @@ pub fn upsert_artifact(conn: &Connection, manifest: &ArtifactManifest) -> rusqli
     Ok(())
 }
 
+pub fn delete_artifact(conn: &Connection, artifact_id: &str) -> rusqlite::Result<()> {
+    conn.execute("DELETE FROM artifacts WHERE id = ?1", [artifact_id])?;
+    Ok(())
+}
+
 /// Wipes and repopulates both tables from whatever's on disk right now.
 /// The sqlite index is a disposable cache, so this is safe to run any time
 /// (startup, or a user-triggered "Rebuild Index") to recover from corruption.
@@ -103,11 +108,33 @@ pub fn rebuild_from_disk(
     Ok(())
 }
 
-pub fn search_artifacts(conn: &Connection, query: &str) -> rusqlite::Result<Vec<String>> {
+/// Searches by title/tags across every project. Reads straight from the
+/// index rather than the filesystem since the index already carries every
+/// field a manifest needs - callers get real ArtifactManifests, not just IDs
+/// they'd have to look up again.
+pub fn search_artifacts(conn: &Connection, query: &str) -> rusqlite::Result<Vec<ArtifactManifest>> {
     let pattern = format!("%{}%", query.to_lowercase());
     let mut stmt = conn.prepare(
-        "SELECT id FROM artifacts WHERE lower(title) LIKE ?1 OR lower(tags) LIKE ?1",
+        "SELECT id, project_id, title, type, source_file, tags, source_note, created_at, updated_at
+         FROM artifacts
+         WHERE lower(title) LIKE ?1 OR lower(tags) LIKE ?1
+         ORDER BY updated_at DESC",
     )?;
-    let rows = stmt.query_map([pattern], |row| row.get::<_, String>(0))?;
+    let rows = stmt.query_map([pattern], |row| {
+        let tags_json: String = row.get(5)?;
+        let tags: Vec<String> = serde_json::from_str(&tags_json).unwrap_or_default();
+        Ok(ArtifactManifest {
+            schema_version: CURRENT_SCHEMA_VERSION,
+            id: row.get(0)?,
+            project_id: row.get(1)?,
+            title: row.get(2)?,
+            artifact_type: row.get(3)?,
+            source_file: row.get(4)?,
+            tags,
+            source_note: row.get(6)?,
+            created_at: row.get(7)?,
+            updated_at: row.get(8)?,
+        })
+    })?;
     rows.collect()
 }
