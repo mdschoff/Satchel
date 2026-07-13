@@ -79,4 +79,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), and the plugin-authoring guides for addi
 
 ## License
 
-MIT
+[AGPL-3.0](LICENSE). In short: use it, learn from it, fork it, contribute — but if you distribute a modified version or run one as a service, your changes must stay open source too.
