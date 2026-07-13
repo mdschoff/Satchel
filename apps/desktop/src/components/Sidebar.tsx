@@ -46,6 +46,8 @@ export function Sidebar() {
   const dropClass = (id: string) =>
     dragActive && overProjectId === id && id !== selectedProjectId ? "drop-target" : "";
 
+  const projectName = (id: string) => projects.find((p) => p.id === id)?.name ?? "Unknown";
+
   const [creatingParentId, setCreatingParentId] = useState<string | null | undefined>(undefined);
   const [newName, setNewName] = useState("");
   const [version, setVersion] = useState("");
@@ -280,7 +282,19 @@ export function Sidebar() {
 
   return (
     <nav className="sidebar">
-      <div className="sidebar-header">Satchel</div>
+      <div className="sidebar-header">
+        <span className="sidebar-title">Satchel</span>
+        <button
+          className="sidebar-collapse"
+          title="Collapse sidebar (⌘B)"
+          onClick={() => setSidebarCollapsed(true)}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="11 17 6 12 11 7" />
+            <polyline points="18 17 13 12 18 7" />
+          </svg>
+        </button>
+      </div>
 
       <input
         className="sidebar-search"
@@ -305,7 +319,10 @@ export function Sidebar() {
                   <span className={`artifact-card-type type-${artifact.type}`}>
                     {TYPE_LABEL[artifact.type] ?? artifact.type}
                   </span>
-                  <span className="search-result-title">{artifact.title}</span>
+                  <span className="search-result-text">
+                    <span className="search-result-title">{artifact.title}</span>
+                    <span className="search-result-project">{projectName(artifact.projectId)}</span>
+                  </span>
                 </li>
               ))}
             </ul>

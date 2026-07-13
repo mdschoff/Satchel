@@ -253,12 +253,33 @@ button:active {
 }
 
 .sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-weight: 650;
   font-size: 1.15em;
   letter-spacing: -0.01em;
   padding: var(--sp-2) var(--sp-2) var(--sp-3);
   margin-bottom: var(--sp-2);
   border-bottom: 1px solid var(--rail-border);
+}
+
+.sidebar-collapse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-xs);
+  color: var(--rail-text-muted);
+}
+
+.sidebar-collapse:hover {
+  background: var(--rail-hover);
+  color: var(--rail-text);
 }
 
 .project-list,
@@ -419,7 +440,22 @@ button:active {
   color: var(--rail-text);
 }
 
+.search-result-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
 .search-result-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-result-project {
+  font-size: 0.75em;
+  color: var(--rail-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
