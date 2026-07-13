@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
+import { confirm, open, save } from "@tauri-apps/plugin-dialog";
 import { getVersion } from "@tauri-apps/api/app";
 import type { Project } from "@satchel/artifact-core";
 import { INBOX_PROJECT_ID } from "@satchel/artifact-core";
 import { useLibraryStore } from "../state/library";
 import { useUiStore } from "../state/ui";
 import { useDndStore } from "../state/dnd";
+import { backend } from "../lib/tauri";
 
 // dev = running against the Vite dev server (latest source, hot-reloaded);
 // packaged = a built .app with frozen assets. import.meta.env.DEV tells them apart.
@@ -26,6 +27,8 @@ export function Sidebar() {
   const selectedProjectId = useLibraryStore((s) => s.selectedProjectId);
   const selectProject = useLibraryStore((s) => s.selectProject);
   const createProject = useLibraryStore((s) => s.createProject);
+  const renameProject = useLibraryStore((s) => s.renameProject);
+  const deleteProject = useLibraryStore((s) => s.deleteProject);
   const importProject = useLibraryStore((s) => s.importProject);
   const searchQuery = useLibraryStore((s) => s.searchQuery);
   const searchResults = useLibraryStore((s) => s.searchResults);
@@ -46,10 +49,61 @@ export function Sidebar() {
   const [creatingParentId, setCreatingParentId] = useState<string | null | undefined>(undefined);
   const [newName, setNewName] = useState("");
   const [version, setVersion] = useState("");
+  const [projectMenu, setProjectMenu] = useState<{ id: string; name: string; x: number; y: number } | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   useEffect(() => {
     getVersion().then(setVersion).catch(() => setVersion("?"));
   }, []);
+
+  // Close the project menu on Escape.
+  useEffect(() => {
+    if (!projectMenu) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setProjectMenu(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [projectMenu]);
+
+  function openProjectMenu(e: React.MouseEvent, project: Project) {
+    e.preventDefault();
+    e.stopPropagation();
+    const x = Math.min(e.clientX, window.innerWidth - 200);
+    const y = Math.min(e.clientY, window.innerHeight - 200);
+    setProjectMenu({ id: project.id, name: project.name, x: Math.max(8, x), y: Math.max(8, y) });
+  }
+
+  function startRename(id: string, name: string) {
+    setProjectMenu(null);
+    setRenamingId(id);
+    setRenameValue(name);
+  }
+
+  function commitRename() {
+    if (renamingId) renameProject(renamingId, renameValue);
+    setRenamingId(null);
+  }
+
+  async function exportProjectFlow(id: string, name: string) {
+    setProjectMenu(null);
+    const dest = await save({
+      title: "Export project",
+      defaultPath: `${name}.zip`,
+      filters: [{ name: "Zip archive", extensions: ["zip"] }],
+    });
+    if (dest) await backend.exportProject(id, dest);
+  }
+
+  async function deleteProjectFlow(id: string, name: string) {
+    setProjectMenu(null);
+    const ok = await confirm(
+      `Delete "${name}" and everything in it? Any sub-projects move up a level. This can't be undone.`,
+      { title: "Delete project", kind: "warning", okLabel: "Delete", cancelLabel: "Cancel" },
+    );
+    if (ok) deleteProject(id);
+  }
 
   // Open the top-level "new project" form when ⌘N / the grid menu asks for it.
   const firstNonce = useRef(newProjectNonce);
@@ -97,10 +151,26 @@ export function Sidebar() {
           className={`project-item ${selectedProjectId === project.id ? "active" : ""} ${dropClass(project.id)}`}
           data-project-id={project.id}
           style={{ paddingLeft: `${0.6 + depth * 1}rem` }}
+          onContextMenu={(e) => openProjectMenu(e, project)}
         >
-          <span className="project-item-name" onClick={() => selectProject(project.id)}>
-            {project.name}
-          </span>
+          {renamingId === project.id ? (
+            <input
+              className="project-rename-input"
+              autoFocus
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.currentTarget.value)}
+              onBlur={commitRename}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitRename();
+                else if (e.key === "Escape") setRenamingId(null);
+              }}
+            />
+          ) : (
+            <span className="project-item-name" onClick={() => selectProject(project.id)}>
+              {project.name}
+            </span>
+          )}
           <button
             className="project-item-add"
             title="New sub-project"
@@ -285,6 +355,54 @@ export function Sidebar() {
       <div className="build-stamp" title="App version · build commit · channel">
         v{version || "…"} · {__GIT_SHA__} · {BUILD_CHANNEL}
       </div>
+
+      {projectMenu && (
+        <>
+          <div
+            className="context-menu-backdrop"
+            onClick={() => setProjectMenu(null)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setProjectMenu(null);
+            }}
+          />
+          <div className="context-menu" style={{ left: projectMenu.x, top: projectMenu.y }} role="menu">
+            <button
+              className="context-menu-item"
+              role="menuitem"
+              onClick={() => startRename(projectMenu.id, projectMenu.name)}
+            >
+              Rename
+            </button>
+            <button
+              className="context-menu-item"
+              role="menuitem"
+              onClick={() => {
+                setCreatingParentId(projectMenu.id);
+                setNewName("");
+                setProjectMenu(null);
+              }}
+            >
+              New sub-project
+            </button>
+            <button
+              className="context-menu-item"
+              role="menuitem"
+              onClick={() => exportProjectFlow(projectMenu.id, projectMenu.name)}
+            >
+              Export project…
+            </button>
+            <div className="context-menu-sep" />
+            <button
+              className="context-menu-item danger"
+              role="menuitem"
+              onClick={() => deleteProjectFlow(projectMenu.id, projectMenu.name)}
+            >
+              Delete
+            </button>
+          </div>
+        </>
+      )}
     </nav>
   );
 }

@@ -120,6 +120,13 @@ pub fn write_project(library_root: &Path, project: &Project) -> Result<()> {
     Ok(())
 }
 
+pub fn read_project(library_root: &Path, project_id: &str) -> Result<Project> {
+    let path = project_dir(library_root, project_id).join("project.json");
+    let raw = fs::read_to_string(&path)
+        .map_err(|_| LibraryError::NotFound(format!("project {project_id}")))?;
+    Ok(serde_json::from_str(&raw)?)
+}
+
 pub fn list_projects(library_root: &Path) -> Result<Vec<Project>> {
     let dir = projects_dir(library_root);
     let mut projects = Vec::new();

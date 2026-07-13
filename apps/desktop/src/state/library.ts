@@ -17,6 +17,8 @@ interface LibraryState {
   loadProjects: () => Promise<void>;
   selectProject: (projectId: string) => Promise<void>;
   createProject: (name: string, parentId?: string | null) => Promise<void>;
+  renameProject: (projectId: string, name: string) => Promise<void>;
+  deleteProject: (projectId: string) => Promise<void>;
   importPaths: (paths: string[]) => Promise<void>;
   importProject: (zipPath: string) => Promise<void>;
   selectArtifact: (artifactId: string | null) => void;
@@ -61,6 +63,30 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   async createProject(name: string, parentId: string | null = null) {
     await backend.createProject(name, null, parentId);
     await get().loadProjects();
+  },
+
+  async renameProject(projectId: string, name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    try {
+      await backend.renameProject(projectId, trimmed);
+      await get().loadProjects();
+    } catch (err) {
+      set({ error: String(err) });
+    }
+  },
+
+  async deleteProject(projectId: string) {
+    try {
+      await backend.deleteProject(projectId);
+      // If we deleted the open project, fall back to the Inbox.
+      if (get().selectedProjectId === projectId) {
+        await get().selectProject(INBOX_PROJECT_ID);
+      }
+      await get().loadProjects();
+    } catch (err) {
+      set({ error: String(err) });
+    }
   },
 
   async importPaths(paths: string[]) {

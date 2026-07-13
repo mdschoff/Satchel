@@ -89,6 +89,14 @@ pub fn delete_artifact(conn: &Connection, artifact_id: &str) -> rusqlite::Result
     Ok(())
 }
 
+/// Removes a project row and every artifact row belonging to it. Children of
+/// the project are reparented separately (see commands::library::delete_project).
+pub fn delete_project(conn: &Connection, project_id: &str) -> rusqlite::Result<()> {
+    conn.execute("DELETE FROM artifacts WHERE project_id = ?1", [project_id])?;
+    conn.execute("DELETE FROM projects WHERE id = ?1", [project_id])?;
+    Ok(())
+}
+
 /// Wipes and repopulates both tables from whatever's on disk right now.
 /// The sqlite index is a disposable cache, so this is safe to run any time
 /// (startup, or a user-triggered "Rebuild Index") to recover from corruption.

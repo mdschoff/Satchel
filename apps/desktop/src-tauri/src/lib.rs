@@ -45,6 +45,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::library::list_projects,
             commands::library::create_project,
+            commands::library::rename_project,
+            commands::library::delete_project,
             commands::library::list_artifacts,
             commands::library::get_artifact_source,
             commands::library::save_artifact_source,

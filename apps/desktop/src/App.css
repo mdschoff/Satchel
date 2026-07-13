@@ -293,6 +293,16 @@ button:active {
   white-space: nowrap;
 }
 
+.project-rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.15rem 0.35rem;
+  font-size: 1em;
+  background: var(--rail-hover);
+  border: 1px solid var(--accent);
+  color: var(--rail-text);
+}
+
 .project-item-add {
   display: none;
   flex-shrink: 0;

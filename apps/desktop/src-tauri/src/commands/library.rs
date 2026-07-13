@@ -33,6 +33,49 @@ pub fn create_project(
 }
 
 #[tauri::command]
+pub fn rename_project(
+    state: State<AppState>,
+    project_id: String,
+    name: String,
+) -> Result<Project, String> {
+    let mut project =
+        library::read_project(&state.library_root, &project_id).map_err(|e| e.to_string())?;
+    project.name = name;
+    project.updated_at = library::now_iso();
+    library::write_project(&state.library_root, &project).map_err(|e| e.to_string())?;
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    db::upsert_project(&conn, &project).map_err(|e| e.to_string())?;
+    Ok(project)
+}
+
+/// Deletes a project and everything in it. Direct child projects are lifted up
+/// to the deleted project's own parent rather than being destroyed or orphaned.
+#[tauri::command]
+pub fn delete_project(state: State<AppState>, project_id: String) -> Result<(), String> {
+    if project_id == INBOX_PROJECT_ID {
+        return Err("The Inbox can't be deleted.".to_string());
+    }
+    let project =
+        library::read_project(&state.library_root, &project_id).map_err(|e| e.to_string())?;
+
+    // Reparent direct children to this project's parent so they aren't orphaned.
+    let mut children = library::list_projects(&state.library_root).map_err(|e| e.to_string())?;
+    children.retain(|p| p.parent_id.as_deref() == Some(project_id.as_str()));
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    for mut child in children {
+        child.parent_id = project.parent_id.clone();
+        child.updated_at = library::now_iso();
+        library::write_project(&state.library_root, &child).map_err(|e| e.to_string())?;
+        db::upsert_project(&conn, &child).map_err(|e| e.to_string())?;
+    }
+
+    let dir = library::project_dir(&state.library_root, &project_id);
+    fs::remove_dir_all(&dir).map_err(|e| e.to_string())?;
+    db::delete_project(&conn, &project_id).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn list_artifacts(state: State<AppState>, project_id: String) -> Result<Vec<ArtifactManifest>, String> {
     library::list_artifacts(&state.library_root, &project_id).map_err(|e| e.to_string())
 }

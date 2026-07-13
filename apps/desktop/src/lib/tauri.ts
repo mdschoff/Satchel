@@ -5,6 +5,9 @@ export const backend = {
   listProjects: () => invoke<Project[]>("list_projects"),
   createProject: (name: string, color: string | null, parentId: string | null) =>
     invoke<Project>("create_project", { name, color, parentId }),
+  renameProject: (projectId: string, name: string) =>
+    invoke<Project>("rename_project", { projectId, name }),
+  deleteProject: (projectId: string) => invoke<void>("delete_project", { projectId }),
   listArtifacts: (projectId: string) =>
     invoke<ArtifactManifest[]>("list_artifacts", { projectId }),
   importArtifact: (projectId: string, sourcePath: string) =>
