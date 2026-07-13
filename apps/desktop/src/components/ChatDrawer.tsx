@@ -88,8 +88,8 @@ export function ChatDrawer({ artifact, source, onApplyEdit }: ChatDrawerProps) {
       {error && <div className="chat-drawer-error">{error}</div>}
 
       <p className="chat-drawer-mcp-note">
-        Prefer your Claude/Codex subscription? Edit from your MCP client instead (Settings → MCP) —
-        no API key needed, and changes show up here live.
+        On your subscription (no API key): pick <strong>Claude Code (subscription)</strong> above, or
+        drive edits from any MCP client (Settings → MCP). Changes show up here live either way.
       </p>
     </div>
   );

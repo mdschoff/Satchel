@@ -3,9 +3,16 @@ import { claudeProvider } from "@satchel/ai-provider-claude";
 import { openaiProvider } from "@satchel/ai-provider-openai";
 import { geminiProvider } from "@satchel/ai-provider-gemini";
 import { ollamaProvider } from "@satchel/ai-provider-ollama";
+import { claudeCodeProvider } from "./claudeCodeProvider";
 
 /** New providers register here; Settings and the chat drawer both read from this list. */
-export const aiProviders: AIProvider[] = [claudeProvider, openaiProvider, geminiProvider, ollamaProvider];
+export const aiProviders: AIProvider[] = [
+  claudeCodeProvider,
+  claudeProvider,
+  openaiProvider,
+  geminiProvider,
+  ollamaProvider,
+];
 
 export function getProvider(id: string): AIProvider | undefined {
   return aiProviders.find((provider) => provider.id === id);

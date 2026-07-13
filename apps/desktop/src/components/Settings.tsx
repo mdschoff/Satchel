@@ -90,7 +90,7 @@ export function Settings() {
                   placeholder="default"
                 />
               </label>
-              {!provider.requiresApiKey && (
+              {provider.requiresBaseUrl && (
                 <label>
                   Base URL
                   <input

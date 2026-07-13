@@ -61,6 +61,7 @@ pub fn run() {
             commands::secrets::save_secret,
             commands::secrets::get_secret,
             commands::secrets::delete_secret,
+            commands::ai::ai_edit_via_claude_code,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

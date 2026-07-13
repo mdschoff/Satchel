@@ -33,6 +33,8 @@ export interface AIProvider {
   id: string;
   label: string;
   requiresApiKey: boolean;
+  /** Whether the provider exposes a configurable base URL (e.g. a local server). */
+  requiresBaseUrl?: boolean;
   edit(request: AIEditRequest, config: AIProviderConfig): Promise<AIEditResult>;
 }
 

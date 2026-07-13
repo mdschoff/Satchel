@@ -1,3 +1,4 @@
+pub mod ai;
 pub mod export;
 pub mod ingest;
 pub mod index;
