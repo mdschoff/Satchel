@@ -21,6 +21,42 @@ export default function App() {
     loadProjects();
   }, [loadProjects]);
 
+  // Standard keyboard shortcuts.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      const ui = useUiStore.getState();
+      const lib = useLibraryStore.getState();
+
+      if (mod && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        ui.toggleSidebar();
+      } else if (mod && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        ui.setSidebarCollapsed(false);
+        setTimeout(() => {
+          const el = document.querySelector<HTMLInputElement>(".sidebar-search");
+          el?.focus();
+          el?.select();
+        }, 0);
+      } else if (mod && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        ui.requestNewProject();
+      } else if (mod && e.key === ",") {
+        e.preventDefault();
+        ui.setView("settings");
+      } else if (e.key === "Escape") {
+        // Don't hijack Escape when a context menu is open (it closes that).
+        if (document.querySelector(".context-menu")) return;
+        if (ui.view === "settings") ui.setView("library");
+        else if (lib.selectedArtifactId) lib.selectArtifact(null);
+        else if (lib.searchQuery) lib.clearSearch();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   // In a shipped build, suppress WebKit's native right-click menu (Inspect
   // Element, Open Frame in New Window, …) so the only context menus are the
   // app's own. Left enabled in dev so devtools stay reachable.

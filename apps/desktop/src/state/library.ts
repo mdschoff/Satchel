@@ -22,6 +22,7 @@ interface LibraryState {
   selectArtifact: (artifactId: string | null) => void;
   refreshArtifacts: () => Promise<void>;
   moveArtifact: (artifactId: string, fromProjectId: string, toProjectId: string) => Promise<void>;
+  moveArtifacts: (ids: string[], fromProjectId: string, toProjectId: string) => Promise<void>;
   deleteArtifact: (artifactId: string) => Promise<void>;
   search: (query: string) => Promise<void>;
   clearSearch: () => void;
@@ -102,6 +103,18 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     if (fromProjectId === toProjectId) return;
     try {
       await backend.moveArtifact(artifactId, fromProjectId, toProjectId);
+      await get().refreshArtifacts();
+    } catch (err) {
+      set({ error: String(err) });
+    }
+  },
+
+  async moveArtifacts(ids, fromProjectId, toProjectId) {
+    if (fromProjectId === toProjectId || ids.length === 0) return;
+    try {
+      for (const id of ids) {
+        await backend.moveArtifact(id, fromProjectId, toProjectId);
+      }
       await get().refreshArtifacts();
     } catch (err) {
       set({ error: String(err) });
