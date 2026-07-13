@@ -27,6 +27,7 @@ interface LibraryState {
   moveArtifact: (artifactId: string, fromProjectId: string, toProjectId: string) => Promise<void>;
   moveArtifacts: (ids: string[], fromProjectId: string, toProjectId: string) => Promise<void>;
   renameArtifact: (artifactId: string, title: string) => Promise<void>;
+  setArtifactTags: (artifactId: string, tags: string[]) => Promise<void>;
   deleteArtifact: (artifactId: string) => Promise<void>;
   search: (query: string) => Promise<void>;
   clearSearch: () => void;
@@ -163,6 +164,15 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     if (!trimmed) return;
     try {
       await backend.renameArtifact(get().selectedProjectId, artifactId, trimmed);
+      await get().refreshArtifacts();
+    } catch (err) {
+      set({ error: String(err) });
+    }
+  },
+
+  async setArtifactTags(artifactId: string, tags: string[]) {
+    try {
+      await backend.setArtifactTags(get().selectedProjectId, artifactId, tags);
       await get().refreshArtifacts();
     } catch (err) {
       set({ error: String(err) });

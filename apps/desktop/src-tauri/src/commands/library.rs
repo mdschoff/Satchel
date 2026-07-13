@@ -148,6 +148,30 @@ pub fn move_artifact(
 }
 
 #[tauri::command]
+pub fn set_artifact_tags(
+    state: State<AppState>,
+    project_id: String,
+    artifact_id: String,
+    tags: Vec<String>,
+) -> Result<ArtifactManifest, String> {
+    let mut manifest = library::read_manifest(&state.library_root, &project_id, &artifact_id)
+        .map_err(|e| e.to_string())?;
+    // Normalize: trim, drop empties, dedupe case-insensitively while keeping
+    // the first spelling the user typed.
+    let mut seen = std::collections::HashSet::new();
+    manifest.tags = tags
+        .into_iter()
+        .map(|t| t.trim().to_string())
+        .filter(|t| !t.is_empty() && seen.insert(t.to_lowercase()))
+        .collect();
+    manifest.updated_at = library::now_iso();
+    library::write_manifest(&state.library_root, &manifest).map_err(|e| e.to_string())?;
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    db::upsert_artifact(&conn, &manifest).map_err(|e| e.to_string())?;
+    Ok(manifest)
+}
+
+#[tauri::command]
 pub fn rename_artifact(
     state: State<AppState>,
     project_id: String,

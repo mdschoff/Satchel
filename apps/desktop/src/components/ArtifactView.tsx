@@ -24,9 +24,13 @@ export function ArtifactView() {
   const deleteArtifact = useLibraryStore((s) => s.deleteArtifact);
   const artifact = useLibraryStore((s) => s.artifacts.find((a) => a.id === s.selectedArtifactId));
 
+  const setArtifactTags = useLibraryStore((s) => s.setArtifactTags);
+
   const [source, setSource] = useState<string>("");
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [compileError, setCompileError] = useState<string | null>(null);
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [tagValue, setTagValue] = useState("");
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -118,13 +122,63 @@ export function ArtifactView() {
   if (!artifact) return null;
   const canEdit = EDITABLE_TYPES.has(artifact.type);
 
+  function commitTag() {
+    const tag = tagValue.trim();
+    if (tag && artifact) {
+      setArtifactTags(artifact.id, [...artifact.tags, tag]);
+    }
+    setTagValue("");
+    setIsAddingTag(false);
+  }
+
+  function removeTag(tag: string) {
+    if (!artifact) return;
+    setArtifactTags(
+      artifact.id,
+      artifact.tags.filter((t) => t !== tag),
+    );
+  }
+
   return (
     <div className="artifact-view">
       <header className="artifact-view-header">
         <button className="back-button" onClick={() => selectArtifact(null)}>
           ← Back
         </button>
-        <h1>{artifact.title}</h1>
+        <div className="artifact-view-titlewrap">
+          <h1>{artifact.title}</h1>
+          <div className="artifact-tags">
+            {artifact.tags.map((tag) => (
+              <span key={tag} className="tag-chip">
+                {tag}
+                <button className="tag-remove" title="Remove tag" onClick={() => removeTag(tag)}>
+                  ×
+                </button>
+              </span>
+            ))}
+            {isAddingTag ? (
+              <input
+                className="tag-add-input"
+                autoFocus
+                value={tagValue}
+                placeholder="tag"
+                onChange={(e) => setTagValue(e.currentTarget.value)}
+                onBlur={commitTag}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitTag();
+                  else if (e.key === "Escape") {
+                    setTagValue("");
+                    setIsAddingTag(false);
+                  }
+                }}
+              />
+            ) : (
+              <button className="tag-add" title="Add tag" onClick={() => setIsAddingTag(true)}>
+                + tag
+              </button>
+            )}
+          </div>
+        </div>
         <div className="artifact-view-actions">
           {canEdit && (
             <button onClick={() => setIsEditorOpen((v) => !v)}>

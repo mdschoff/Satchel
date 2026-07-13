@@ -20,6 +20,8 @@ export const backend = {
     invoke<ArtifactManifest>("move_artifact", { artifactId, fromProjectId, toProjectId }),
   renameArtifact: (projectId: string, artifactId: string, title: string) =>
     invoke<ArtifactManifest>("rename_artifact", { projectId, artifactId, title }),
+  setArtifactTags: (projectId: string, artifactId: string, tags: string[]) =>
+    invoke<ArtifactManifest>("set_artifact_tags", { projectId, artifactId, tags }),
   deleteArtifact: (projectId: string, artifactId: string) =>
     invoke<void>("delete_artifact", { projectId, artifactId }),
   rebuildIndex: () => invoke<void>("rebuild_index"),
