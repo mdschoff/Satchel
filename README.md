@@ -11,9 +11,19 @@
 
 A local-first desktop workspace for artifacts your AI makes — HTML, SVG, React components, Markdown, images, PDFs. Drag them in, organize them into projects, open them live and interactive, and keep editing them by hand or with AI.
 
+<p align="center">
+  <img src="docs/images/grid.png" width="840" alt="A Satchel project of artifacts, each card showing a live thumbnail preview" />
+</p>
+
 ## Why
 
 AI tools generate a lot of one-off, throwaway artifacts. Satchel gives them a permanent, organized home outside any one chat thread — a single window where you can collect, view, edit, and keep working on them.
+
+Open any artifact and it renders live, right next to a code editor and an AI chat — edit it by hand, with your API key, or on your Claude/Codex subscription over MCP:
+
+<p align="center">
+  <img src="docs/images/editing.png" width="840" alt="An artifact open in Satchel rendering live, with the Ask AI editing panel open" />
+</p>
 
 ## Features
 
