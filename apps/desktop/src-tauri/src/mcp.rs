@@ -9,8 +9,9 @@
 
 use crate::library::{ArtifactManifest, ArtifactVersion, Project};
 use crate::{commands, AppState};
+use base64::Engine;
 use rmcp::handler::server::wrapper::{Json, Parameters};
-use rmcp::model::{ServerCapabilities, ServerInfo};
+use rmcp::model::{CallToolResult, ContentBlock, ServerCapabilities, ServerInfo};
 use rmcp::transport::streamable_http_server::{
     session::local::LocalSessionManager, StreamableHttpServerConfig, StreamableHttpService,
 };
@@ -30,6 +31,32 @@ pub const MCP_PORT: u16 = 7825;
 
 fn mcp_err(message: String) -> McpError {
     McpError::internal_error(message, None)
+}
+
+/// Rasterizes an SVG string to PNG bytes with resvg (pure Rust, no browser).
+/// Scales the artwork so the longer side is ~1024px, on a white background.
+fn rasterize_svg(svg: &str) -> Result<Vec<u8>, String> {
+    use resvg::tiny_skia;
+    use resvg::usvg;
+
+    let mut opt = usvg::Options::default();
+    opt.fontdb_mut().load_system_fonts();
+    let tree = usvg::Tree::from_str(svg, &opt).map_err(|e| e.to_string())?;
+
+    let size = tree.size();
+    let max_dim = size.width().max(size.height());
+    let scale = if max_dim > 0.0 { (1024.0 / max_dim).min(2.0) } else { 1.0 };
+    let pw = ((size.width() * scale).ceil() as u32).max(1);
+    let ph = ((size.height() * scale).ceil() as u32).max(1);
+
+    let mut pixmap = tiny_skia::Pixmap::new(pw, ph).ok_or("failed to allocate pixmap")?;
+    pixmap.fill(tiny_skia::Color::WHITE);
+    resvg::render(
+        &tree,
+        tiny_skia::Transform::from_scale(scale, scale),
+        &mut pixmap.as_mut(),
+    );
+    pixmap.encode_png().map_err(|e| e.to_string())
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -170,6 +197,34 @@ impl SatchelMcpServer {
     ) -> Result<String, McpError> {
         let state = self.app.state::<AppState>();
         commands::library::get_artifact_source(state, project_id, artifact_id).map_err(mcp_err)
+    }
+
+    #[tool(description = "Render an artifact to a PNG image so you can SEE what it currently \
+        looks like - use this after editing to check your work visually, then edit again if \
+        it's not right. Currently supports SVG artifacts (charts, diagrams, illustrations).")]
+    async fn render_artifact(
+        &self,
+        Parameters(GetArtifactParams { project_id, artifact_id }): Parameters<GetArtifactParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let state = self.app.state::<AppState>();
+        let manifest =
+            crate::library::read_manifest(&state.library_root, &project_id, &artifact_id)
+                .map_err(|e| mcp_err(e.to_string()))?;
+        if manifest.artifact_type != "svg" {
+            return Err(mcp_err(format!(
+                "Visual rendering currently supports SVG artifacts only (this one is '{}'). \
+                 Read its source with get_artifact_source instead.",
+                manifest.artifact_type
+            )));
+        }
+        let source =
+            commands::library::get_artifact_source(state, project_id, artifact_id).map_err(mcp_err)?;
+        let png = rasterize_svg(&source).map_err(mcp_err)?;
+        let b64 = base64::engine::general_purpose::STANDARD.encode(&png);
+        Ok(CallToolResult::success(vec![ContentBlock::image(
+            b64,
+            "image/png".to_string(),
+        )]))
     }
 
     #[tool(description = "Create a new artifact directly from content - the way to push \

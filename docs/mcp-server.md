@@ -18,6 +18,7 @@ instead of you copying content in and out by hand.
 - `list_artifacts` - artifacts within a project
 - `search_artifacts` - search by title/tags across every project
 - `get_artifact_source` - read an artifact's content
+- `render_artifact` - render an artifact to a PNG so the model can *see* what it looks like (SVG today) - the feedback loop for iterating on visuals
 - `create_artifact` - push a new artifact in directly from content (html, svg, markdown, jsx, tsx)
 - `update_artifact` - overwrite an existing artifact's content (the previous version is kept in that artifact's history)
 - `list_artifact_versions` - see an artifact's saved version history
