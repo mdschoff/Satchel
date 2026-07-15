@@ -30,6 +30,7 @@ export function NoteEditor({ markdown, onChange }: NoteEditorProps) {
       }),
     ],
     content: markdown,
+    autofocus: "end", // opening a note is ready to type, no click needed
     onUpdate({ editor }) {
       const md: string = editor.storage.markdown.getMarkdown();
       lastEmitted.current = md;

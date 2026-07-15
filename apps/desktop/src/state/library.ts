@@ -13,8 +13,6 @@ interface LibraryState {
   error: string | null;
   searchQuery: string;
   searchResults: ArtifactManifest[];
-  /** When set, ArtifactView opens straight into the editor for this id (new notes). */
-  editIntentId: string | null;
 
   loadProjects: () => Promise<void>;
   selectProject: (projectId: string) => Promise<void>;
@@ -26,7 +24,6 @@ interface LibraryState {
   createFromContent: (title: string, artifactType: string, content: string) => Promise<void>;
   createNote: () => Promise<void>;
   duplicateArtifact: (artifactId: string) => Promise<void>;
-  clearEditIntent: () => void;
   selectArtifact: (artifactId: string | null) => void;
   refreshArtifacts: () => Promise<void>;
   moveArtifact: (artifactId: string, fromProjectId: string, toProjectId: string) => Promise<void>;
@@ -49,7 +46,6 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   error: null,
   searchQuery: "",
   searchResults: [],
-  editIntentId: null,
 
   async loadProjects() {
     set({ isLoading: true, error: null });
@@ -138,7 +134,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         "# Untitled note\n\n",
       );
       await get().refreshArtifacts();
-      set({ selectedArtifactId: note.id, editIntentId: note.id });
+      set({ selectedArtifactId: note.id });
     } catch (err) {
       set({ error: String(err) });
     }
@@ -152,10 +148,6 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     } catch (err) {
       set({ error: String(err) });
     }
-  },
-
-  clearEditIntent() {
-    set({ editIntentId: null });
   },
 
   selectArtifact(artifactId: string | null) {

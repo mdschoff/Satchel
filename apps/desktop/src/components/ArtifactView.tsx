@@ -37,6 +37,30 @@ export function ArtifactView() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Resizable split: code pane as % of the body, side drawers in px.
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const [editorPct, setEditorPct] = useState(45);
+  const [historyWidth, setHistoryWidth] = useState(288);
+  const [chatWidth, setChatWidth] = useState(336);
+
+  /** Generic divider drag: applies clientX against the body's rect until mouseup. */
+  function startResize(e: React.MouseEvent, apply: (clientX: number, rect: DOMRect) => void) {
+    e.preventDefault();
+    const rect = bodyRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    document.body.classList.add("pane-resizing");
+    const move = (ev: MouseEvent) => apply(ev.clientX, rect);
+    const up = () => {
+      document.body.classList.remove("pane-resizing");
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  }
+
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
   const renderSource = useCallback(
     async (rawSource: string) => {
       if (!artifact) return;
@@ -82,11 +106,9 @@ export function ArtifactView() {
   useEffect(() => {
     if (!artifact || !selectedArtifactId) return;
     loadSource();
-    // A note created via "New note" opens straight into the editor.
-    if (useLibraryStore.getState().editIntentId === selectedArtifactId) {
-      setIsEditorOpen(true);
-      useLibraryStore.getState().clearEditIntent();
-    }
+    // Opening an artifact always starts clean: just the document/preview.
+    // Code, history, and chat are opt-in per visit.
+    setIsEditorOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedArtifactId]);
 
@@ -219,17 +241,27 @@ export function ArtifactView() {
         </div>
       </header>
 
-      <div className="artifact-view-body">
+      <div className="artifact-view-body" ref={bodyRef}>
         {isEditorOpen && canEdit && (
-          <div className="artifact-editor-pane">
-            <Editor
-              language={MONACO_LANGUAGE[artifact.type] ?? "plaintext"}
-              value={source}
-              onChange={handleEditorChange}
-              theme="vs-dark"
-              options={{ minimap: { enabled: false }, fontSize: 13 }}
+          <>
+            <div className="artifact-editor-pane" style={{ width: `${editorPct}%` }}>
+              <Editor
+                language={MONACO_LANGUAGE[artifact.type] ?? "plaintext"}
+                value={source}
+                onChange={handleEditorChange}
+                theme="vs-dark"
+                options={{ minimap: { enabled: false }, fontSize: 13 }}
+              />
+            </div>
+            <div
+              className="pane-resizer"
+              onMouseDown={(e) =>
+                startResize(e, (x, rect) =>
+                  setEditorPct(clamp(((x - rect.left) / rect.width) * 100, 20, 75)),
+                )
+              }
             />
-          </div>
+          </>
         )}
 
         <div className="artifact-preview-pane">
@@ -248,16 +280,36 @@ export function ArtifactView() {
         </div>
 
         {isHistoryOpen && (
-          <VersionHistory
-            projectId={selectedProjectId}
-            artifactId={artifact.id}
-            onRestored={loadSource}
-            onClose={() => setIsHistoryOpen(false)}
-          />
+          <>
+            <div
+              className="pane-resizer"
+              onMouseDown={(e) =>
+                startResize(e, (x, rect) => setHistoryWidth(clamp(rect.right - x, 220, 560)))
+              }
+            />
+            <div className="drawer-sizer" style={{ width: historyWidth }}>
+              <VersionHistory
+                projectId={selectedProjectId}
+                artifactId={artifact.id}
+                onRestored={loadSource}
+                onClose={() => setIsHistoryOpen(false)}
+              />
+            </div>
+          </>
         )}
 
         {isChatOpen && (
-          <ChatDrawer artifact={artifact} source={source} onApplyEdit={handleAIEdit} />
+          <>
+            <div
+              className="pane-resizer"
+              onMouseDown={(e) =>
+                startResize(e, (x, rect) => setChatWidth(clamp(rect.right - x, 240, 560)))
+              }
+            />
+            <div className="drawer-sizer" style={{ width: chatWidth }}>
+              <ChatDrawer artifact={artifact} source={source} onApplyEdit={handleAIEdit} />
+            </div>
+          </>
         )}
       </div>
     </div>

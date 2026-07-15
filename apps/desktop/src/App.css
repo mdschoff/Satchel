@@ -939,6 +939,44 @@ body.dnd-active {
   border-right: 1px solid var(--border);
 }
 
+/* ---- Resizable panes ---- */
+
+.pane-resizer {
+  flex-shrink: 0;
+  width: 5px;
+  margin: 0 -2px; /* generous hit area without eating layout */
+  cursor: col-resize;
+  z-index: 5;
+  background: transparent;
+  transition: background-color 0.12s ease;
+}
+
+.pane-resizer:hover {
+  background: var(--accent-ring);
+}
+
+body.pane-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* iframes swallow mouse events mid-drag - disable them while resizing */
+body.pane-resizing iframe {
+  pointer-events: none;
+}
+
+/* Wrapper that gives side drawers a draggable width; the drawer fills it. */
+.drawer-sizer {
+  flex-shrink: 0;
+  display: flex;
+  min-width: 0;
+}
+
+.drawer-sizer > * {
+  width: 100% !important;
+  flex-shrink: 1;
+}
+
 .artifact-preview-pane {
   flex: 1;
   min-width: 0;
