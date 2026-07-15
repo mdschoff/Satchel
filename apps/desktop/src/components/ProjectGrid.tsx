@@ -31,6 +31,8 @@ export function ProjectGrid() {
   const moveArtifact = useLibraryStore((s) => s.moveArtifact);
   const moveArtifacts = useLibraryStore((s) => s.moveArtifacts);
   const renameArtifact = useLibraryStore((s) => s.renameArtifact);
+  const duplicateArtifact = useLibraryStore((s) => s.duplicateArtifact);
+  const createNote = useLibraryStore((s) => s.createNote);
   const deleteArtifact = useLibraryStore((s) => s.deleteArtifact);
   const projects = useLibraryStore((s) => s.projects);
   const selectedProjectId = useLibraryStore((s) => s.selectedProjectId);
@@ -231,6 +233,7 @@ export function ProjectGrid() {
           {selected.size > 0 && (
             <span className="selection-count">{selected.size} selected</span>
           )}
+          <button onClick={() => createNote()}>New note</button>
           <button onClick={handleExportClick}>Export…</button>
           <button className="btn-primary" onClick={handleImportClick}>
             Import files…
@@ -311,6 +314,16 @@ export function ProjectGrid() {
                   onClick={() => startRename(menu.artifactId, menu.title)}
                 >
                   Rename
+                </button>
+                <button
+                  className="context-menu-item"
+                  role="menuitem"
+                  onClick={() => {
+                    duplicateArtifact(menu.artifactId);
+                    setMenu(null);
+                  }}
+                >
+                  Duplicate
                 </button>
                 <div className="context-menu-sep" />
                 <div className="context-menu-label">Move to</div>

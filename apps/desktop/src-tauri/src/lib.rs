@@ -53,6 +53,7 @@ pub fn run() {
             commands::library::move_artifact,
             commands::library::rename_artifact,
             commands::library::set_artifact_tags,
+            commands::library::duplicate_artifact,
             commands::library::delete_artifact,
             commands::library::list_artifact_versions,
             commands::library::restore_artifact_version,

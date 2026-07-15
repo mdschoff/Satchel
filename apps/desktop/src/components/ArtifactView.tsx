@@ -81,6 +81,11 @@ export function ArtifactView() {
   useEffect(() => {
     if (!artifact || !selectedArtifactId) return;
     loadSource();
+    // A note created via "New note" opens straight into the editor.
+    if (useLibraryStore.getState().editIntentId === selectedArtifactId) {
+      setIsEditorOpen(true);
+      useLibraryStore.getState().clearEditIntent();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedArtifactId]);
 

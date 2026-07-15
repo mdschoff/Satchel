@@ -188,6 +188,45 @@ pub fn rename_artifact(
     Ok(manifest)
 }
 
+/// Copies an artifact (manifest, source, and tags) into a new artifact in the
+/// same project - a fork to iterate on without touching the original. Version
+/// history is intentionally not copied; the fork starts fresh.
+#[tauri::command]
+pub fn duplicate_artifact(
+    state: State<AppState>,
+    project_id: String,
+    artifact_id: String,
+) -> Result<ArtifactManifest, String> {
+    let original = library::read_manifest(&state.library_root, &project_id, &artifact_id)
+        .map_err(|e| e.to_string())?;
+    let src_path = library::artifact_dir(&state.library_root, &project_id, &artifact_id)
+        .join(&original.source_file);
+    let bytes = fs::read(&src_path).map_err(|e| e.to_string())?;
+
+    let new_id = library::new_id();
+    let dest_dir = library::artifact_dir(&state.library_root, &project_id, &new_id);
+    fs::create_dir_all(&dest_dir).map_err(|e| e.to_string())?;
+    fs::write(dest_dir.join(&original.source_file), bytes).map_err(|e| e.to_string())?;
+
+    let now = library::now_iso();
+    let copy = ArtifactManifest {
+        schema_version: CURRENT_SCHEMA_VERSION,
+        id: new_id,
+        project_id: project_id.clone(),
+        title: format!("{} copy", original.title),
+        artifact_type: original.artifact_type,
+        source_file: original.source_file,
+        tags: original.tags,
+        source_note: original.source_note,
+        created_at: now.clone(),
+        updated_at: now,
+    };
+    library::write_manifest(&state.library_root, &copy).map_err(|e| e.to_string())?;
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    db::upsert_artifact(&conn, &copy).map_err(|e| e.to_string())?;
+    Ok(copy)
+}
+
 #[tauri::command]
 pub fn delete_artifact(
     state: State<AppState>,
