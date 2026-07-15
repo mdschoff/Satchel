@@ -26,6 +26,48 @@ pub fn export_project(
     Ok(())
 }
 
+/// Copies a single artifact's source file out to a standalone path the user
+/// picked - "give me just this as a real file" so it can be shared or used
+/// outside Satchel, without exporting the whole project.
+#[tauri::command]
+pub fn export_artifact(
+    state: State<AppState>,
+    project_id: String,
+    artifact_id: String,
+    dest_path: String,
+) -> Result<(), String> {
+    let manifest = library::read_manifest(&state.library_root, &project_id, &artifact_id)
+        .map_err(|e| e.to_string())?;
+    let source = library::artifact_dir(&state.library_root, &project_id, &artifact_id)
+        .join(&manifest.source_file);
+    fs::copy(&source, &dest_path).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// The default filename + extension to offer when exporting an artifact.
+#[tauri::command]
+pub fn artifact_export_name(
+    state: State<AppState>,
+    project_id: String,
+    artifact_id: String,
+) -> Result<String, String> {
+    let manifest = library::read_manifest(&state.library_root, &project_id, &artifact_id)
+        .map_err(|e| e.to_string())?;
+    let ext = Path::new(&manifest.source_file)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("txt");
+    // Sanitize the title into a filename.
+    let stem: String = manifest
+        .title
+        .chars()
+        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '-' })
+        .collect();
+    let stem = stem.trim_matches('-');
+    let stem = if stem.is_empty() { "artifact" } else { stem };
+    Ok(format!("{stem}.{ext}"))
+}
+
 /// Imports a project exported via `export_project` (by this or any other
 /// Satchel install). Assigns fresh project/artifact ids rather than reusing
 /// the ones from the export, so importing never collides with anything

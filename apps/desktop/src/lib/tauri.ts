@@ -38,6 +38,10 @@ export const backend = {
     invoke<void>("restore_artifact_version", { projectId, artifactId, timestamp }),
   exportProject: (projectId: string, destPath: string) =>
     invoke<void>("export_project", { projectId, destPath }),
+  exportArtifact: (projectId: string, artifactId: string, destPath: string) =>
+    invoke<void>("export_artifact", { projectId, artifactId, destPath }),
+  artifactExportName: (projectId: string, artifactId: string) =>
+    invoke<string>("artifact_export_name", { projectId, artifactId }),
   importProject: (zipPath: string) => invoke<Project>("import_project", { zipPath }),
   createArtifactFromContent: (
     projectId: string | null,

@@ -214,6 +214,13 @@ export function ProjectGrid() {
     await backend.exportProject(project.id, destPath);
   }
 
+  async function handleExportArtifact(artifactId: string) {
+    setMenu(null);
+    const defaultPath = await backend.artifactExportName(selectedProjectId, artifactId);
+    const dest = await save({ title: "Export artifact", defaultPath });
+    if (dest) await backend.exportArtifact(selectedProjectId, artifactId, dest);
+  }
+
   async function handleDelete(artifactId: string, title: string) {
     setMenu(null);
     const ok = await confirm(`Delete "${title}"? This can't be undone.`, {
@@ -324,6 +331,13 @@ export function ProjectGrid() {
                   }}
                 >
                   Duplicate
+                </button>
+                <button
+                  className="context-menu-item"
+                  role="menuitem"
+                  onClick={() => handleExportArtifact(menu.artifactId)}
+                >
+                  Export…
                 </button>
                 <div className="context-menu-sep" />
                 <div className="context-menu-label">Move to</div>
