@@ -34,6 +34,8 @@ export const backend = {
   deleteSecret: (providerId: string) => invoke<void>("delete_secret", { providerId }),
   listArtifactVersions: (projectId: string, artifactId: string) =>
     invoke<ArtifactVersion[]>("list_artifact_versions", { projectId, artifactId }),
+  readArtifactVersion: (projectId: string, artifactId: string, timestamp: string) =>
+    invoke<string>("read_artifact_version", { projectId, artifactId, timestamp }),
   restoreArtifactVersion: (projectId: string, artifactId: string, timestamp: string) =>
     invoke<void>("restore_artifact_version", { projectId, artifactId, timestamp }),
   exportProject: (projectId: string, destPath: string) =>

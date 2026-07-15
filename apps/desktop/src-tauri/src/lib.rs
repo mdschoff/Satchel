@@ -56,6 +56,7 @@ pub fn run() {
             commands::library::duplicate_artifact,
             commands::library::delete_artifact,
             commands::library::list_artifact_versions,
+            commands::library::read_artifact_version,
             commands::library::restore_artifact_version,
             commands::library::create_artifact_from_content,
             commands::export::export_project,

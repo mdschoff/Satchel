@@ -271,6 +271,18 @@ pub fn list_artifact_versions(
     library::list_versions(&state.library_root, &project_id, &artifact_id).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub fn read_artifact_version(
+    state: State<AppState>,
+    project_id: String,
+    artifact_id: String,
+    timestamp: String,
+) -> Result<String, String> {
+    let path =
+        library::versions_dir(&state.library_root, &project_id, &artifact_id).join(&timestamp);
+    fs::read_to_string(&path).map_err(|e| e.to_string())
+}
+
 /// Restoring is itself non-destructive: the about-to-be-replaced content gets
 /// snapshotted first, so restoring an old version is just another entry in
 /// the same history, not a one-way trip.

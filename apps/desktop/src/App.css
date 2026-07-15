@@ -1047,6 +1047,75 @@ body.dnd-active {
   font-variant-numeric: tabular-nums;
 }
 
+.version-history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.version-history-actions {
+  display: flex;
+  gap: var(--sp-1);
+  flex-shrink: 0;
+}
+
+.version-diff-toggle {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  padding: 0.35em 0.6em;
+}
+
+.version-diff {
+  margin-top: var(--sp-2);
+}
+
+.version-diff pre {
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.diff-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 0 0.5em;
+}
+
+.diff-gutter {
+  display: inline-block;
+  width: 1em;
+  color: var(--text-faint);
+  user-select: none;
+}
+
+.diff-add {
+  background: color-mix(in srgb, #22c55e 15%, transparent);
+}
+
+.diff-add .diff-gutter {
+  color: #22c55e;
+}
+
+.diff-del {
+  background: var(--danger-soft);
+}
+
+.diff-del .diff-gutter {
+  color: var(--danger);
+}
+
+.diff-same {
+  color: var(--text-muted);
+}
+
 /* ============================================================
    Settings
    ============================================================ */
