@@ -14,6 +14,16 @@ pub struct AppState {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Emit logs to stderr (respects RUST_LOG; defaults to info). Without this,
+    // every tracing::warn/error - including "an artifact was skipped" and MCP
+    // bind failures - would go nowhere, making silent failures undiagnosable.
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "satchel=info".into()),
+        )
+        .init();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())

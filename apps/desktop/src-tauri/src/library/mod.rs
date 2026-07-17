@@ -140,9 +140,13 @@ pub fn list_projects(library_root: &Path) -> Result<Vec<Project>> {
         }
         let manifest_path = entry.path().join("project.json");
         if manifest_path.exists() {
-            let raw = fs::read_to_string(manifest_path)?;
-            if let Ok(project) = serde_json::from_str::<Project>(&raw) {
-                projects.push(project);
+            let raw = fs::read_to_string(&manifest_path)?;
+            match serde_json::from_str::<Project>(&raw) {
+                Ok(project) => projects.push(project),
+                // Skip a corrupt project.json rather than failing the whole
+                // list, but say so - a silently vanishing project is the kind
+                // of failure that's impossible to diagnose otherwise.
+                Err(e) => tracing::warn!("skipping unreadable project {}: {e}", manifest_path.display()),
             }
         }
     }
@@ -181,9 +185,10 @@ pub fn list_artifacts(library_root: &Path, project_id: &str) -> Result<Vec<Artif
         }
         let manifest_path = entry.path().join("manifest.json");
         if manifest_path.exists() {
-            let raw = fs::read_to_string(manifest_path)?;
-            if let Ok(manifest) = serde_json::from_str::<ArtifactManifest>(&raw) {
-                artifacts.push(manifest);
+            let raw = fs::read_to_string(&manifest_path)?;
+            match serde_json::from_str::<ArtifactManifest>(&raw) {
+                Ok(manifest) => artifacts.push(manifest),
+                Err(e) => tracing::warn!("skipping unreadable artifact {}: {e}", manifest_path.display()),
             }
         }
     }
