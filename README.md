@@ -43,6 +43,8 @@ Every release includes a `SHA256SUMS.txt` to verify your download.
 > ```
 >
 > Then it opens normally from that point on.
+>
+> Code signing requires a $99/yr Apple Developer membership — [sponsoring the project](https://github.com/sponsors/mdschoff) gets us there, and this note disappears.
 
 ## Why
 
