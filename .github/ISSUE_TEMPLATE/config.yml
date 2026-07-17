@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/mdschoff/satchel/security/advisories/new
+    about: Please report security issues privately, not as a public issue. See SECURITY.md.
+  - name: Question or idea
+    url: https://github.com/mdschoff/satchel/discussions
+    about: For open-ended questions and discussion (if Discussions is enabled).

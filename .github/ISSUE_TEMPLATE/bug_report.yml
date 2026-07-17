@@ -1,0 +1,53 @@
+name: Bug report
+description: Something in Satchel isn't working right
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a report. The more detail here, the faster it gets fixed.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, and what went wrong?
+      placeholder: I clicked X and expected Y, but Z happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a project
+        2. Right-click an artifact
+        3. ...
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Satchel version
+      description: The build stamp in the sidebar footer, e.g. `v0.1.2 · a1b2c3d · packaged`.
+      placeholder: v0.1.2 · a1b2c3d · packaged
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Windows
+        - Linux (built from source)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, screenshots, or the artifact source
+      description: Anything that helps reproduce it. If an artifact renders wrong, pasting its source is very helpful.
+    validations:
+      required: false
