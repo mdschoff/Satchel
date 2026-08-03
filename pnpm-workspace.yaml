@@ -11,3 +11,6 @@ onlyBuiltDependencies:
 # (16 Dependabot advisories against <=3.4.10).
 overrides:
   dompurify: ">=3.4.11"
+  # Build-time only (postcss comes in via vite, a devDependency) but patch it
+  # anyway - GHSA-r28c-9q8g-f849, path traversal in source-map auto-loading.
+  postcss: ">=8.5.18"
