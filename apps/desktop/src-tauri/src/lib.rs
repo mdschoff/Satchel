@@ -2,6 +2,7 @@ mod commands;
 mod db;
 mod library;
 mod mcp;
+mod render;
 
 use std::path::PathBuf;
 use std::sync::Mutex;

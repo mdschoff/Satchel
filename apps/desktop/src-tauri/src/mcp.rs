@@ -33,33 +33,6 @@ fn mcp_err(message: String) -> McpError {
     McpError::internal_error(message, None)
 }
 
-/// Rasterizes an SVG string to PNG bytes with resvg (pure Rust, no browser).
-/// Scales the artwork so the longer side is ~`max_size`px, on a white background.
-fn rasterize_svg(svg: &str, max_size: u32) -> Result<Vec<u8>, String> {
-    use resvg::tiny_skia;
-    use resvg::usvg;
-
-    let mut opt = usvg::Options::default();
-    opt.fontdb_mut().load_system_fonts();
-    let tree = usvg::Tree::from_str(svg, &opt).map_err(|e| e.to_string())?;
-
-    let target = max_size.clamp(64, 4096) as f32;
-    let size = tree.size();
-    let max_dim = size.width().max(size.height());
-    let scale = if max_dim > 0.0 { (target / max_dim).min(4.0) } else { 1.0 };
-    let pw = ((size.width() * scale).ceil() as u32).max(1);
-    let ph = ((size.height() * scale).ceil() as u32).max(1);
-
-    let mut pixmap = tiny_skia::Pixmap::new(pw, ph).ok_or("failed to allocate pixmap")?;
-    pixmap.fill(tiny_skia::Color::WHITE);
-    resvg::render(
-        &tree,
-        tiny_skia::Transform::from_scale(scale, scale),
-        &mut pixmap.as_mut(),
-    );
-    pixmap.encode_png().map_err(|e| e.to_string())
-}
-
 #[derive(Debug, Deserialize, JsonSchema)]
 struct ListArtifactsParams {
     /// The project (folder) to list artifacts from.
@@ -212,7 +185,10 @@ impl SatchelMcpServer {
     #[tool(description = "Render an artifact to a PNG image so you can SEE what it currently \
         looks like - use this after editing to check your work visually, then edit again if \
         it's not right. Currently supports SVG artifacts (charts, diagrams, illustrations). \
-        Pass max_size to control the resolution (default 1024px on the longer side).")]
+        Pass max_size to control the resolution (default 1024px on the longer side). \
+        ALWAYS read the text block returned alongside the image: it lists fonts that were \
+        substituted and references that rendered blank, which look identical to markup bugs \
+        in the pixels but are not fixable by editing the markup.")]
     async fn render_artifact(
         &self,
         Parameters(RenderParams { project_id, artifact_id, max_size }): Parameters<RenderParams>,
@@ -230,12 +206,14 @@ impl SatchelMcpServer {
         }
         let source =
             commands::library::get_artifact_source(state, project_id, artifact_id).map_err(mcp_err)?;
-        let png = rasterize_svg(&source, max_size.unwrap_or(1024)).map_err(mcp_err)?;
-        let b64 = base64::engine::general_purpose::STANDARD.encode(&png);
-        Ok(CallToolResult::success(vec![ContentBlock::image(
-            b64,
-            "image/png".to_string(),
-        )]))
+        let out = crate::render::rasterize_svg(&source, max_size.unwrap_or(1024))
+            .map_err(mcp_err)?;
+        let summary = out.diagnostics.summary(out.width, out.height);
+        let b64 = base64::engine::general_purpose::STANDARD.encode(&out.png);
+        Ok(CallToolResult::success(vec![
+            ContentBlock::image(b64, "image/png".to_string()),
+            ContentBlock::text(summary),
+        ]))
     }
 
     #[tool(description = "Create a new artifact directly from content - the way to push \
