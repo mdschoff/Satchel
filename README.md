@@ -4,12 +4,12 @@
 
 <h1 align="center">Satchel</h1>
 
-<p align="center"><strong>A permanent, local home for the artifacts your AI makes.</strong></p>
+<p align="center"><strong>An MCP-native desktop library for the artifacts your AI makes.</strong></p>
 
 <p align="center">
-  <a href="https://github.com/mdschoff/satchel/actions/workflows/ci.yml"><img src="https://github.com/mdschoff/satchel/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <a href="https://github.com/mdschoff/satchel/releases/latest"><img src="https://img.shields.io/github/v/release/mdschoff/satchel?color=cf9b5a" alt="Latest release" /></a>
-  <a href="https://github.com/mdschoff/satchel/releases"><img src="https://img.shields.io/github/downloads/mdschoff/satchel/total?color=cf9b5a" alt="Downloads" /></a>
+  <a href="https://github.com/mdschoff/Satchel/actions/workflows/ci.yml"><img src="https://github.com/mdschoff/Satchel/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/mdschoff/Satchel/releases/latest"><img src="https://img.shields.io/github/v/release/mdschoff/Satchel?color=cf9b5a" alt="Latest release" /></a>
+  <a href="https://github.com/mdschoff/Satchel/releases"><img src="https://img.shields.io/github/downloads/mdschoff/Satchel/total?color=cf9b5a" alt="Downloads" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License: AGPL-3.0" /></a>
 </p>
 
@@ -17,11 +17,13 @@
   <a href="#download">Download</a> ·
   <a href="docs/mcp-server.md">MCP server</a> ·
   <a href="docs/architecture.md">Architecture</a> ·
-  <a href="https://github.com/mdschoff/satchel/issues">Bug reports</a> ·
+  <a href="https://github.com/mdschoff/Satchel/issues">Bug reports</a> ·
   <a href="https://github.com/sponsors/mdschoff">Sponsor</a>
 </p>
 
 Every chart, component, diagram, and page your AI generates scrolls away into a conversation. Satchel gives them a home: a local-first desktop workspace where artifacts — HTML, SVG, React components, Markdown, images, PDFs — are collected into projects, render live, and stay editable forever, by hand or by AI.
+
+It ships with an [MCP server](docs/mcp-server.md) built in. Point Claude Code, Claude Desktop, or Cursor at it and your model can list, search, read, write, and re-render artifacts directly in your library, with every edit versioned and visible in the app as it happens. No copying content in and out of a chat window.
 
 <p align="center">
   <img src="docs/images/grid.png" width="840" alt="A Satchel project of artifacts, each card showing a live thumbnail preview" />
@@ -29,10 +31,10 @@ Every chart, component, diagram, and page your AI generates scrolls away into a 
 
 ## Download
 
-Latest installers are on the [releases page](https://github.com/mdschoff/satchel/releases/latest):
+Latest installers are on the [releases page](https://github.com/mdschoff/Satchel/releases/latest):
 
 - **macOS** — `Satchel_x.y.z_universal.dmg` (Apple Silicon + Intel)
-- **Windows** — `Satchel_x.y.z_x64_en-US.msi`
+- **Windows** — `Satchel_x.y.z_x64-setup.exe` (installs for the current user) or `Satchel_x.y.z_x64_en-US.msi` (installs for all users, needs admin)
 
 Every release includes a `SHA256SUMS.txt` to verify your download.
 
