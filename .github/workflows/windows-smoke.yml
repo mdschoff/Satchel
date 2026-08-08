@@ -2,15 +2,17 @@ name: Windows smoke test
 
 # Half of all Satchel downloads are Windows installers, but every line of this
 # app has only ever been run by hand on macOS. `cargo test` proves the library
-# layer compiles and passes on Windows; it does NOT prove that the MSI installs,
-# that the app boots, or that the backend comes up.
+# layer compiles and passes on Windows; it does NOT prove that the installers
+# install, that the app boots, or that the backend comes up.
 #
 # This job closes that gap without needing a human at a Windows desktop. The
 # trick is that Satchel already exposes a headless assertion surface: the MCP
-# server on 127.0.0.1:7825. If it answers a real `tools/list` handshake, then
-# tauri's setup() ran to completion - meaning the library dirs were created,
-# sqlite opened and rebuilt its index, and mcp::spawn bound its port. That is
-# the whole backend, verified without ever looking at a window.
+# server on 127.0.0.1:7825 (see .github/scripts/probe-mcp.ps1).
+#
+# Build once, then verify each installer format on its own clean runner. Both
+# formats ship, both get downloaded, and they install to different locations
+# via different machinery - so testing only one proves nothing about the other.
+# Separate runners also mean the two apps can't collide on port 7825.
 #
 # Runs on every release tag (so no release ships unverified) and weekly (so a
 # Windows-only regression from a dependency bump surfaces within 7 days).
@@ -27,14 +29,13 @@ permissions:
   contents: read
 
 jobs:
-  smoke:
+  build:
     runs-on: windows-latest
     timeout-minutes: 45
-
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -48,135 +49,106 @@ jobs:
       - name: Build installers
         run: pnpm --filter @satchel/desktop tauri build
 
+      - name: Upload installers
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-installers
+          path: |
+            apps/desktop/src-tauri/target/release/bundle/msi/*.msi
+            apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error
+          retention-days: 7
+
+  verify:
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        installer: [msi, nsis]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download installers
+        uses: actions/download-artifact@v8
+        with:
+          name: windows-installers
+          path: installers
+
       # ---------------------------------------------------------------------
       # 1. The installer itself works.
       # ---------------------------------------------------------------------
-      - name: Install the MSI silently
+      - name: Install (MSI)
+        if: matrix.installer == 'msi'
         shell: pwsh
         run: |
-          $msi = Get-ChildItem apps/desktop/src-tauri/target/release/bundle/msi/*.msi |
-                 Select-Object -First 1
-          if (-not $msi) { throw "no MSI produced by tauri build" }
+          $msi = Get-ChildItem installers -Recurse -Filter *.msi | Select-Object -First 1
+          if (-not $msi) { throw "no MSI in the build artifact" }
           Write-Host "installing $($msi.Name)"
-
           $p = Start-Process msiexec.exe -Wait -PassThru -ArgumentList @(
             "/i", "`"$($msi.FullName)`"", "/quiet", "/qn", "/norestart",
             "/l*v", "$env:RUNNER_TEMP\install.log"
           )
           if ($p.ExitCode -ne 0) {
-            Get-Content "$env:RUNNER_TEMP\install.log" -Tail 60
+            Get-Content "$env:RUNNER_TEMP\install.log" -Tail 60 -EA SilentlyContinue
             throw "msiexec failed with exit code $($p.ExitCode)"
           }
 
-      - name: Verify installed files
+      - name: Install (NSIS)
+        if: matrix.installer == 'nsis'
         shell: pwsh
         run: |
-          $exe = "C:\Program Files\Satchel\Satchel.exe"
-          if (-not (Test-Path $exe)) {
-            Get-ChildItem "C:\Program Files\Satchel" -Recurse -EA SilentlyContinue |
-              Select-Object FullName
-            throw "Satchel.exe not found at $exe after install"
+          $exe = Get-ChildItem installers -Recurse -Filter *-setup.exe | Select-Object -First 1
+          if (-not $exe) { throw "no NSIS setup.exe in the build artifact" }
+          Write-Host "installing $($exe.Name)"
+          # /S is NSIS silent mode. Tauri's NSIS defaults to a currentUser
+          # install, so this lands under %LOCALAPPDATA%, not Program Files.
+          $p = Start-Process $exe.FullName -Wait -PassThru -ArgumentList "/S"
+          if ($p.ExitCode -ne 0) { throw "NSIS installer failed with exit code $($p.ExitCode)" }
+
+      - name: Locate installed executable
+        id: locate
+        shell: pwsh
+        run: |
+          # Don't hardcode one path - MSI installs per-machine and NSIS installs
+          # per-user by default, and either default could change under us.
+          $candidates = @(
+            "C:\Program Files\Satchel\Satchel.exe",
+            "${env:ProgramFiles(x86)}\Satchel\Satchel.exe",
+            "$env:LOCALAPPDATA\Satchel\Satchel.exe",
+            "$env:APPDATA\Local\Satchel\Satchel.exe"
+          )
+          $found = $candidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+
+          if (-not $found) {
+            # Widen the net before giving up, and report what we did find so a
+            # changed install location is a one-line diagnosis, not a mystery.
+            Write-Host "not in any expected location; searching..."
+            $found = Get-ChildItem "C:\Program Files", "C:\Program Files (x86)", $env:LOCALAPPDATA `
+                       -Filter Satchel.exe -Recurse -EA SilentlyContinue |
+                     Select-Object -First 1 -ExpandProperty FullName
           }
-          $v = (Get-Item $exe).VersionInfo.FileVersion
-          Write-Host "installed Satchel.exe, FileVersion=$v"
+          if (-not $found) { throw "Satchel.exe not found after installing the ${{ matrix.installer }} package" }
+
+          Write-Host "found $found"
+          "exe=$found" >> $env:GITHUB_OUTPUT
 
       # ---------------------------------------------------------------------
       # 2. It boots, and the backend actually comes up.
       # ---------------------------------------------------------------------
-      - name: Launch app and probe the MCP server
+      - name: Boot app and probe the MCP server
         shell: pwsh
         run: |
-          $ErrorActionPreference = "Stop"
-          $out = "$env:RUNNER_TEMP\satchel.out.log"
-          $err = "$env:RUNNER_TEMP\satchel.err.log"
-
-          # RUST_LOG so a failure in setup() leaves a trace we can read.
-          $env:RUST_LOG = "satchel=debug"
-          $app = Start-Process "C:\Program Files\Satchel\Satchel.exe" -PassThru `
-                   -RedirectStandardOutput $out -RedirectStandardError $err
-
-          try {
-            # Poll the port. A dead process short-circuits the wait so a panic
-            # in setup() reports in seconds instead of burning the full timeout.
-            $up = $false
-            foreach ($i in 1..60) {
-              if ($app.HasExited) {
-                throw "app exited during startup with code $($app.ExitCode)"
-              }
-              $c = Test-NetConnection -ComputerName 127.0.0.1 -Port 7825 `
-                     -InformationLevel Quiet -WarningAction SilentlyContinue
-              if ($c) { $up = $true; break }
-              Start-Sleep -Seconds 1
-            }
-            if (-not $up) { throw "MCP server never bound 127.0.0.1:7825 (60s)" }
-            Write-Host "MCP server is listening"
-
-            $url = "http://127.0.0.1:7825/mcp"
-            $headers = @{ "Accept" = "application/json, text/event-stream" }
-
-            # -- initialize -------------------------------------------------
-            $init = @{
-              jsonrpc = "2.0"; id = 1; method = "initialize"
-              params  = @{
-                protocolVersion = "2025-03-26"
-                capabilities    = @{}
-                clientInfo      = @{ name = "ci-smoke"; version = "1.0" }
-              }
-            } | ConvertTo-Json -Depth 10
-
-            $r = Invoke-WebRequest -Uri $url -Method Post -Body $init `
-                   -ContentType "application/json" -Headers $headers -TimeoutSec 30
-            $sid = $r.Headers["mcp-session-id"]
-            if ($sid -is [array]) { $sid = $sid[0] }
-            if (-not $sid) { throw "initialize returned no mcp-session-id header" }
-            Write-Host "initialized, session=$sid"
-
-            $sessed = $headers.Clone()
-            $sessed["mcp-session-id"] = $sid
-
-            # -- notifications/initialized ----------------------------------
-            $note = @{ jsonrpc = "2.0"; method = "notifications/initialized" } |
-                    ConvertTo-Json -Depth 5
-            Invoke-WebRequest -Uri $url -Method Post -Body $note `
-              -ContentType "application/json" -Headers $sessed -TimeoutSec 30 | Out-Null
-
-            # -- tools/list --------------------------------------------------
-            $list = @{ jsonrpc = "2.0"; id = 2; method = "tools/list"; params = @{} } |
-                    ConvertTo-Json -Depth 5
-            $r2 = Invoke-WebRequest -Uri $url -Method Post -Body $list `
-                    -ContentType "application/json" -Headers $sessed -TimeoutSec 30
-
-            # The response is SSE-framed ("data: {...}"), so match on content
-            # rather than parsing a strict JSON envelope.
-            $body = $r2.Content
-            $expected = @(
-              "list_projects", "create_project", "list_artifacts",
-              "search_artifacts", "get_artifact_source", "render_artifact",
-              "create_artifact", "update_artifact", "list_artifact_versions"
-            )
-            $missing = $expected | Where-Object { $body -notmatch [regex]::Escape($_) }
-            if ($missing) {
-              Write-Host "--- tools/list response ---"
-              Write-Host $body
-              throw "tools/list missing: $($missing -join ', ')"
-            }
-            Write-Host "all $($expected.Count) MCP tools present - backend is healthy"
-          }
-          finally {
-            if (-not $app.HasExited) { Stop-Process -Id $app.Id -Force -EA SilentlyContinue }
-            foreach ($f in @($out, $err)) {
-              if ((Test-Path $f) -and (Get-Item $f).Length -gt 0) {
-                Write-Host "--- $f ---"
-                Get-Content $f -Tail 80
-              }
-            }
-          }
+          & "$env:GITHUB_WORKSPACE\.github\scripts\probe-mcp.ps1" `
+            -Exe "${{ steps.locate.outputs.exe }}" -LogDir "$env:RUNNER_TEMP"
 
       - name: Upload logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: windows-smoke-logs
+          name: windows-smoke-logs-${{ matrix.installer }}
           path: |
             ${{ runner.temp }}/install.log
             ${{ runner.temp }}/satchel.out.log
