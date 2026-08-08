@@ -7,10 +7,21 @@ allowBuilds:
   esbuild: true
 onlyBuiltDependencies:
   - esbuild
-# Force the patched dompurify past monaco-editor's transitive pin
-# (16 Dependabot advisories against <=3.4.10).
+# Force the patched dompurify past monaco-editor's transitive pin. This one
+# actually ships (monaco-editor is a runtime dependency), so keep it current:
+# 3.4.11 cleared 16 advisories against <=3.4.10, 3.4.13 clears
+# GHSA-55q2-fjhq-7xh7 (detached subtree stays executable after IN_PLACE hook
+# removal -> XSS).
+#
+# Every override is pinned to its CURRENT major (^) on purpose. A bare ">=x.y.z"
+# lets pnpm satisfy the override with the next major - e.g. ">=3.3.17" on nanoid
+# silently resolved to 6.0.1, which is ESM-only and would break postcss's CJS
+# require. Patch the advisory, don't smuggle in a major bump.
 overrides:
-  dompurify: ">=3.4.11"
+  dompurify: "^3.4.13"
   # Build-time only (postcss comes in via vite, a devDependency) but patch it
   # anyway - GHSA-r28c-9q8g-f849, path traversal in source-map auto-loading.
-  postcss: ">=8.5.18"
+  postcss: "^8.5.18"
+  # Also build-time only (nanoid comes in under postcss) - GHSA-2v37-7h3g-55p8,
+  # custom generators loop forever when size is zero.
+  nanoid: "^3.3.17"
