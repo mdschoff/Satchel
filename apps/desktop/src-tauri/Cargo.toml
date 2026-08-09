@@ -42,6 +42,13 @@ tempfile = "3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 keyring = { version = "4", features = ["apple-native-keyring-store"] }
+# Offscreen HTML rendering prototype (see src/render_html.rs, issue #8).
+# Versions track what wry already pulls in, so this adds no new tree.
+objc2 = "0.6"
+block2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSString", "NSData", "NSError", "NSURL", "NSDictionary", "NSObject"] }
+objc2-app-kit = { version = "0.3", features = ["NSImage", "NSImageRep", "NSBitmapImageRep", "NSGraphics"] }
+objc2-web-kit = { version = "0.3", features = ["WKWebView", "WKSnapshotConfiguration", "WKNavigation", "block2"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 keyring = { version = "4", features = ["windows-native-keyring-store"] }

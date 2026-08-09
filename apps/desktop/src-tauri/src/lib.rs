@@ -3,6 +3,8 @@ mod db;
 mod library;
 mod mcp;
 mod render;
+#[cfg(target_os = "macos")]
+mod render_html;
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -50,6 +52,10 @@ pub fn run() {
             });
 
             mcp::spawn(app.handle().clone());
+
+            // No-op unless SATCHEL_PROTOTYPE_RENDER_HTML is set (issue #8 spike).
+            #[cfg(target_os = "macos")]
+            render_html::run_prototype_if_requested(app.handle());
 
             Ok(())
         })
