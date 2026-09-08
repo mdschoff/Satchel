@@ -25,3 +25,13 @@ overrides:
   # Also build-time only (nanoid comes in under postcss) - GHSA-2v37-7h3g-55p8,
   # custom generators loop forever when size is zero.
   nanoid: "^3.3.17"
+  # Ships (tiptap powers the note editor) - GHSA-cp6q-959q-f8rh, mergeAttributes()
+  # turns an own __proto__ key into inherited executable DOM attributes.
+  # GitHub's advisory range says "< 3.30.4", but 2.27.3 is the 2.x backport:
+  # its dist carries the `if (key === '__proto__') Object.defineProperty(...)`
+  # guard, verified by diffing the published tarball against 2.27.2. So this is
+  # a patch bump, not the 2.x -> 3.x migration the advisory implies.
+  "@tiptap/core": "^2.27.3"
+  # Build-time only (browserslist comes in under @babel via @vitejs/plugin-react,
+  # a devDependency) - GHSA-73wf-gq98-2v4g and GHSA-c83g-rgw3-j3cx.
+  browserslist: "^4.28.7"
