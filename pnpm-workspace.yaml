@@ -11,14 +11,15 @@ onlyBuiltDependencies:
 # actually ships (monaco-editor is a runtime dependency), so keep it current:
 # 3.4.11 cleared 16 advisories against <=3.4.10, 3.4.13 clears
 # GHSA-55q2-fjhq-7xh7 (detached subtree stays executable after IN_PLACE hook
-# removal -> XSS).
+# removal -> XSS), and 3.4.16 clears GHSA-p98j-92pf-mc4p (the node-removing
+# afterSanitize variant of the same bug, event handlers left armed).
 #
 # Every override is pinned to its CURRENT major (^) on purpose. A bare ">=x.y.z"
 # lets pnpm satisfy the override with the next major - e.g. ">=3.3.17" on nanoid
 # silently resolved to 6.0.1, which is ESM-only and would break postcss's CJS
 # require. Patch the advisory, don't smuggle in a major bump.
 overrides:
-  dompurify: "^3.4.13"
+  dompurify: "^3.4.16"
   # Build-time only (postcss comes in via vite, a devDependency) but patch it
   # anyway - GHSA-r28c-9q8g-f849, path traversal in source-map auto-loading.
   postcss: "^8.5.18"
@@ -35,3 +36,13 @@ overrides:
   # Build-time only (browserslist comes in under @babel via @vitejs/plugin-react,
   # a devDependency) - GHSA-73wf-gq98-2v4g and GHSA-c83g-rgw3-j3cx.
   browserslist: "^4.28.7"
+  # Ships, and we run the exact configuration the advisory names: NoteEditor
+  # sets linkify:true, which tiptap-markdown passes to markdown-it under the
+  # hood. GHSA-253c-mchw-3w2r - two quadratic paths in the linkifier, so a few
+  # hundred KB of markdown wedges the event loop for tens of seconds. A big
+  # note arriving over MCP is enough to hang the editor.
+  markdown-it: "^14.3.1"
+  # Build-time only (source-map-js comes in under postcss via vite, a
+  # devDependency) - GHSA-68fv-2mgg-jv7q, event-loop DoS via indexed
+  # source-map section offsets.
+  source-map-js: "^1.2.2"
