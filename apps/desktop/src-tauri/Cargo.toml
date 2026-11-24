@@ -28,7 +28,7 @@ uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2"
 base64 = "0.22"
-zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
+zip = { version = "9.8.2", default-features = false, features = ["deflate"] }
 rmcp = { version = "2.2.0", features = ["server", "transport-streamable-http-server", "transport-streamable-http-server-session", "schemars"] }
 schemars = { version = "1.2.1", features = ["derive"] }
 axum = "0.8.9"

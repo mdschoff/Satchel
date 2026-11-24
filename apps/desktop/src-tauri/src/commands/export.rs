@@ -201,3 +201,81 @@ fn add_dir_to_zip(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Writes `dir` into a zip at `zip_path` using the same writer path
+    /// export_project uses, so the test exercises the real code.
+    fn zip_dir(dir: &Path, zip_path: &Path) {
+        let file = fs::File::create(zip_path).unwrap();
+        let mut zip = ZipWriter::new(file);
+        let options =
+            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+        add_dir_to_zip(&mut zip, dir, dir, options).unwrap();
+        zip.finish().unwrap();
+    }
+
+    #[test]
+    fn project_survives_an_export_import_round_trip() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        fs::create_dir_all(src.join("artifacts/abc")).unwrap();
+        fs::write(src.join("project.json"), r#"{"name":"demo"}"#).unwrap();
+        fs::write(src.join("artifacts/abc/manifest.json"), r#"{"id":"abc"}"#).unwrap();
+        fs::write(src.join("artifacts/abc/source.svg"), "<svg/>").unwrap();
+
+        let zip_path = tmp.path().join("demo.satchel.zip");
+        zip_dir(&src, &zip_path);
+
+        let out = tmp.path().join("out");
+        fs::create_dir_all(&out).unwrap();
+        let mut archive = zip::ZipArchive::new(fs::File::open(&zip_path).unwrap()).unwrap();
+        extract_zip(&mut archive, &out).unwrap();
+
+        // Nested structure and byte-for-byte contents both have to survive.
+        assert_eq!(fs::read_to_string(out.join("project.json")).unwrap(), r#"{"name":"demo"}"#);
+        assert_eq!(fs::read_to_string(out.join("artifacts/abc/source.svg")).unwrap(), "<svg/>");
+        assert!(out.join("artifacts/abc/manifest.json").is_file());
+    }
+
+    #[test]
+    fn extraction_refuses_to_escape_the_destination() {
+        // The guard that matters: an imported .satchel file is untrusted input,
+        // and a crafted entry must not be able to write outside the temp dir.
+        // enclosed_name() is what enforces this - this test fails loudly if a
+        // future zip upgrade changes that behaviour.
+        let tmp = tempfile::tempdir().unwrap();
+        let zip_path = tmp.path().join("evil.zip");
+        {
+            let file = fs::File::create(&zip_path).unwrap();
+            let mut zip = ZipWriter::new(file);
+            let options = SimpleFileOptions::default();
+            for name in ["../escaped.txt", "../../escaped.txt", "nested/../../escaped.txt"] {
+                zip.start_file(name, options).unwrap();
+                zip.write_all(b"pwned").unwrap();
+            }
+            zip.start_file("legit.txt", options).unwrap();
+            zip.write_all(b"fine").unwrap();
+            zip.finish().unwrap();
+        }
+
+        let out = tmp.path().join("out");
+        fs::create_dir_all(&out).unwrap();
+        let mut archive = zip::ZipArchive::new(fs::File::open(&zip_path).unwrap()).unwrap();
+        extract_zip(&mut archive, &out).unwrap();
+
+        assert!(out.join("legit.txt").is_file(), "benign entry should extract");
+        // Verified non-vacuous: the traversal names survive into the archive
+        // verbatim (name() == "../escaped.txt"), and enclosed_name() is what
+        // returns None for them. Drop that guard and this count goes above 1.
+        let written: Vec<_> = fs::read_dir(&out).unwrap().map(|e| e.unwrap().file_name()).collect();
+        assert_eq!(written.len(), 1, "only the benign entry should land: {written:?}");
+        assert!(!tmp.path().join("escaped.txt").exists(), "entry escaped the destination");
+        assert!(
+            !tmp.path().parent().unwrap().join("escaped.txt").exists(),
+            "entry escaped two levels up"
+        );
+    }
+}
